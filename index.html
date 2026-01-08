@@ -4,91 +4,94 @@
   <meta charset="UTF-8">
   <title>Gym Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Tailwind CSS -->
+  <!-- Tailwind + Font -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Google Font Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #1E1E1E; }
+    .card { background-color: #2C2C2C; transition: transform 0.1s; }
+    .card:hover { transform: scale(1.02); }
+    .btn-primary { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+    .btn-primary:hover { background: linear-gradient(90deg, #2563EB, #3B82F6); }
+    .btn-success { background: linear-gradient(90deg, #10B981, #34D399); }
+    .btn-success:hover { background: linear-gradient(90deg, #059669, #10B981); }
+    input { border-radius: 4px; border: 1px solid #555; }
+  </style>
 </head>
-<body class="bg-[#1E1E1E] text-white min-h-screen p-4 font-sans">
+<body class="text-white min-h-screen p-4">
 
-  <!-- Supabase -->
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    window.supabase = createClient(
-      "https://tilhxllfluynrubuspyy.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbGh4bGxmbHV5bnJ1YnVzcHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODA1MDUsImV4cCI6MjA4MzI1NjUwNX0.0CIZfIgFDVWFrn50n-qvjUMPVGSiEyQzeas0AmmV0wU"
-    );
-  </script>
+<!-- Supabase -->
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+window.supabase = createClient(
+  "https://tilhxllfluynrubuspyy.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbGh4bGxmbHV5bnJ1YnVzcHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODA1MDUsImV4cCI6MjA4MzI1NjUwNX0.0CIZfIgFDVWFrn50n-qvjUMPVGSiEyQzeas0AmmV0wU"
+);
+</script>
 
-  <script type="module" src="app.js" defer></script>
+<script type="module" src="app.js" defer></script>
 
-  <!-- HOME -->
-  <div id="home-page" class="flex flex-col gap-4">
-    <h1 class="text-4xl font-bold text-center">Gym Tracker</h1>
-    <button id="view-workouts-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded text-xl w-full transition-colors duration-200">
-      View Workouts
-    </button>
-    <button id="start-workout-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 rounded text-xl w-full transition-colors duration-200">
-      Start Workout
-    </button>
-    <p id="quote-home" class="text-gray-400 italic text-center"></p>
-  </div>
+<!-- HOME -->
+<div id="home-page" class="flex flex-col gap-4">
+  <h1 class="text-4xl font-bold text-center text-white">Gym Tracker</h1>
+  <button id="view-workouts-btn" class="btn-primary px-4 py-3 rounded text-xl w-full">View Workouts</button>
+  <button id="start-workout-btn" class="btn-success px-4 py-3 rounded text-xl w-full">Start Workout</button>
+  <p id="quote-home" class="text-gray-400 italic text-center"></p>
+</div>
 
-  <!-- VIEW WORKOUTS -->
-  <div id="view-workouts-page" class="hidden flex flex-col gap-3">
-    <button class="back-btn bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-lg transition-colors duration-200">Back</button>
-    <h2 class="text-3xl font-bold text-center">Your Workouts</h2>
-    <div id="workouts-list" class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto"></div>
-    <button id="create-workout-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded text-xl w-full transition-colors duration-200">Create Workout</button>
-    <p id="quote-view" class="text-gray-400 italic text-center"></p>
-  </div>
+<!-- VIEW WORKOUTS -->
+<div id="view-workouts-page" class="hidden flex flex-col gap-3">
+  <button class="back-btn bg-gray-700 px-3 py-2 rounded text-lg">Back</button>
+  <h2 class="text-3xl font-bold text-center">Your Workouts</h2>
+  <div id="workouts-list" class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto"></div>
+  <button id="create-workout-btn" class="btn-primary px-4 py-3 rounded text-xl w-full">Create Workout</button>
+  <p id="quote-view" class="text-gray-400 italic text-center"></p>
+</div>
 
-  <!-- VIEW EXERCISES -->
-  <div id="view-exercises-page" class="hidden flex flex-col gap-3">
-    <button class="back-btn bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-lg transition-colors duration-200">Back</button>
-    <h2 id="selected-workout-title" class="text-3xl font-bold text-center"></h2>
-    <div id="exercises-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
-    <button id="add-exercise-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded text-xl w-full transition-colors duration-200">Add Exercise</button>
-    <p id="quote-exercises" class="text-gray-400 italic text-center"></p>
-  </div>
+<!-- VIEW EXERCISES -->
+<div id="view-exercises-page" class="hidden flex flex-col gap-3">
+  <button class="back-btn bg-gray-700 px-3 py-2 rounded text-lg">Back</button>
+  <h2 id="selected-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
+  <div id="exercises-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+  <button id="add-exercise-btn" class="btn-primary px-4 py-3 rounded text-xl w-full">Add Exercise</button>
+  <p id="quote-exercises" class="text-gray-400 italic text-center"></p>
+</div>
 
-  <!-- START WORKOUT -->
-  <div id="start-workout-page" class="hidden flex flex-col gap-3">
-    <button class="back-btn bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-lg transition-colors duration-200">Back</button>
-    <h2 id="start-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
-    <div id="start-workout-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
-    <button id="finish-workout-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-3 rounded text-xl w-full mt-3 hidden transition-colors duration-200">Finish Workout</button>
-    <p id="quote-start" class="text-gray-400 italic text-center"></p>
-  </div>
+<!-- START WORKOUT -->
+<div id="start-workout-page" class="hidden flex flex-col gap-3">
+  <button class="back-btn bg-gray-700 px-3 py-2 rounded text-lg">Back</button>
+  <h2 id="start-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
+  <div id="start-workout-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+  <button id="finish-workout-btn" class="btn-success px-4 py-3 rounded text-xl w-full mt-3 hidden">Finish Workout</button>
+  <p id="quote-start" class="text-gray-400 italic text-center"></p>
+</div>
 
-  <!-- EXERCISE DETAIL -->
-  <div id="exercise-detail-page" class="hidden flex flex-col gap-3">
-    <button class="back-btn bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded text-lg transition-colors duration-200">Back</button>
-    <h2 id="exercise-title" class="text-3xl font-bold text-center"></h2>
+<!-- EXERCISE DETAIL -->
+<div id="exercise-detail-page" class="hidden flex flex-col gap-3">
+  <button class="back-btn bg-gray-700 px-3 py-2 rounded text-lg">Back</button>
+  <h2 id="exercise-title" class="text-3xl font-bold text-center"></h2>
 
-    <!-- Timer -->
-    <div id="timer-container" class="flex flex-col sm:flex-row items-center gap-2 justify-center mb-2">
-      <label for="timer-input" class="font-bold">Rest Timer (sec):</label>
-      <input id="timer-input" type="number" min="0" class="w-20 p-2 text-black text-lg text-center" value="90">
-      <span id="timer-display" class="text-yellow-400 text-2xl font-bold">01:30</span>
-      <div class="flex gap-2 mt-2 sm:mt-0">
-        <button id="start-timer-btn" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded text-lg transition-colors duration-200">Start</button>
-        <button id="reset-timer-btn" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-lg transition-colors duration-200">Reset</button>
-      </div>
+  <!-- Timer -->
+  <div id="timer-container" class="flex flex-col sm:flex-row items-center gap-2 justify-center mb-2">
+    <label for="timer-input" class="font-bold">Rest Timer (sec):</label>
+    <input id="timer-input" type="number" min="0" class="w-20 p-2 text-black text-lg text-center" value="90">
+    <span id="timer-display" class="text-yellow-400 text-2xl font-bold">01:30</span>
+    <div class="flex gap-2 mt-2 sm:mt-0">
+      <button id="start-timer-btn" class="btn-primary px-4 py-2 rounded text-lg">Start</button>
+      <button id="reset-timer-btn" class="bg-gray-700 px-4 py-2 rounded text-lg">Reset</button>
     </div>
-
-    <!-- Sets -->
-    <div id="sets-container" class="flex flex-col gap-3 max-h-[50vh] overflow-y-auto"></div>
-
-    <!-- Notes -->
-    <textarea id="exercise-note" class="p-3 rounded text-black text-lg w-full" placeholder="Notes"></textarea>
-    <button id="save-exercise-note" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded text-xl w-full transition-colors duration-200">Save</button>
-
-    <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
-    <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
   </div>
+
+  <!-- Sets -->
+  <div id="sets-container" class="flex flex-col gap-3 max-h-[50vh] overflow-y-auto"></div>
+
+  <!-- Notes -->
+  <textarea id="exercise-note" class="p-3 rounded text-black text-lg w-full" placeholder="Notes"></textarea>
+  <button id="save-exercise-note" class="btn-primary px-4 py-3 rounded text-xl w-full">Save</button>
+
+  <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
+  <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
+</div>
 
 </body>
 </html>
