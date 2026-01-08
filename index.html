@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Gym Tracker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Mobile friendly -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen p-4">
@@ -24,59 +24,61 @@
     <h1 class="text-4xl font-bold text-center">Gym Tracker</h1>
     <button id="view-workouts-btn" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">View Workouts</button>
     <button id="start-workout-btn" class="bg-green-700 px-4 py-3 rounded text-xl w-full">Start Workout</button>
-    <p id="quote-home" class="text-gray-400 italic text-base text-center mt-2"></p>
+    <p id="quote-home" class="text-gray-400 italic text-center"></p>
   </div>
 
   <!-- VIEW WORKOUTS -->
-  <div id="view-workouts-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded w-24">Back</button>
-    <h2 class="text-3xl font-bold text-center my-2">Your Workouts</h2>
-    <div id="workouts-list" class="flex flex-col gap-2"></div>
-    <button id="create-workout-btn" class="bg-blue-700 px-4 py-2 rounded text-lg w-full mt-2">Create Workout</button>
-    <p id="quote-view" class="text-gray-400 italic text-base text-center mt-2"></p>
+  <div id="view-workouts-page" class="hidden flex flex-col gap-3">
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
+    <h2 class="text-3xl font-bold text-center">Your Workouts</h2>
+    <div id="workouts-list" class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto"></div>
+    <button id="create-workout-btn" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Create Workout</button>
+    <p id="quote-view" class="text-gray-400 italic text-center"></p>
   </div>
 
   <!-- VIEW EXERCISES -->
-  <div id="view-exercises-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded w-24">Back</button>
-    <h2 id="selected-workout-title" class="text-3xl font-bold text-center my-2"></h2>
-    <div id="exercises-list" class="flex flex-col gap-2"></div>
-    <button id="add-exercise-btn" class="bg-blue-700 px-4 py-2 rounded text-lg w-full mt-2">Add Exercise</button>
-    <p id="quote-exercises" class="text-gray-400 italic text-base text-center mt-2"></p>
+  <div id="view-exercises-page" class="hidden flex flex-col gap-3">
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
+    <h2 id="selected-workout-title" class="text-3xl font-bold text-center"></h2>
+    <div id="exercises-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+    <button id="add-exercise-btn" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Add Exercise</button>
+    <p id="quote-exercises" class="text-gray-400 italic text-center"></p>
   </div>
 
-  <!-- START WORKOUT / WORKOUT EXERCISES -->
-  <div id="start-workout-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded w-24">Back</button>
-    <h2 class="text-3xl font-bold text-center my-2">Select Workout</h2>
-    <div id="start-workout-list" class="flex flex-col gap-2"></div>
-    <button id="finish-workout-btn" class="bg-green-700 px-4 py-2 rounded text-lg w-full mt-4">Finish Workout</button>
-    <p id="quote-start" class="text-gray-400 italic text-base text-center mt-2"></p>
+  <!-- START WORKOUT -->
+  <div id="start-workout-page" class="hidden flex flex-col gap-3">
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
+    <h2 class="text-3xl font-bold text-center">Select Workout</h2>
+    <div id="start-workout-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+    <button id="finish-workout-btn" class="bg-green-700 px-4 py-3 rounded text-xl w-full mt-3">Finish Workout</button>
+    <p id="quote-start" class="text-gray-400 italic text-center"></p>
   </div>
 
   <!-- EXERCISE DETAIL -->
   <div id="exercise-detail-page" class="hidden flex flex-col gap-3">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded w-24">Back</button>
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
     <h2 id="exercise-title" class="text-3xl font-bold text-center"></h2>
 
     <!-- Timer -->
-    <div id="timer-container" class="flex flex-col sm:flex-row items-center gap-2 justify-center mb-3">
-      <label for="timer-input" class="font-bold text-lg">Rest Timer:</label>
-      <input id="timer-input" type="number" min="0" class="w-24 p-2 text-black rounded" value="90">
-      <span id="timer-display" class="text-yellow-400 text-xl">01:30</span>
+    <div id="timer-container" class="flex flex-col sm:flex-row items-center gap-2 justify-center mb-2">
+      <label for="timer-input" class="font-bold">Rest Timer (sec):</label>
+      <input id="timer-input" type="number" min="0" class="w-20 p-2 text-black text-lg text-center" value="90">
+      <span id="timer-display" class="text-yellow-400 text-2xl font-bold">01:30</span>
       <div class="flex gap-2 mt-2 sm:mt-0">
-        <button id="start-timer-btn" class="bg-blue-700 px-3 py-2 rounded text-lg">Start</button>
-        <button id="reset-timer-btn" class="bg-gray-700 px-3 py-2 rounded text-lg">Reset</button>
+        <button id="start-timer-btn" class="bg-blue-700 px-4 py-2 rounded text-lg">Start</button>
+        <button id="reset-timer-btn" class="bg-gray-700 px-4 py-2 rounded text-lg">Reset</button>
       </div>
     </div>
 
-    <div id="sets-container" class="flex flex-col gap-2"></div>
+    <!-- Sets -->
+    <div id="sets-container" class="flex flex-col gap-3 max-h-[50vh] overflow-y-auto"></div>
 
-    <textarea id="exercise-note" class="p-3 rounded text-black w-full text-lg" placeholder="Notes"></textarea>
-    <button id="save-exercise-note" class="bg-blue-700 px-4 py-3 rounded text-lg w-full mt-2">Save</button>
+    <!-- Notes -->
+    <textarea id="exercise-note" class="p-3 rounded text-black text-lg w-full" placeholder="Notes"></textarea>
+    <button id="save-exercise-note" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Save Note</button>
 
     <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
-    <p id="quote-exercise" class="text-gray-400 italic text-base text-center mt-1"></p>
+    <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
   </div>
 
 </body>
