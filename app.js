@@ -138,14 +138,42 @@ async function loadExercises(workout) {
   list.innerHTML = "";
 
   for (const ex of exercises) {
+    // 1️⃣ Fetch all previous notes for this exercise to calculate PB
+    const { data: allNotes } = await supabase
+      .from("notes")
+      .select("*")
+      .eq("exercise_id", ex.id)
+      .order("created_at", { ascending: true });
+
+    // 2️⃣ Group notes by session (created_at date)
+    const sessions = {};
+    allNotes.forEach(n => {
+      const date = n.created_at.split("T")[0];
+      if (!sessions[date]) sessions[date] = [];
+      sessions[date].push(n);
+    });
+
+    // 3️⃣ Calculate max total (PB) for this exercise
+    let pbTotal = 0;
+    Object.values(sessions).forEach(session => {
+      const total = session.reduce((sum, set) => sum + (set.reps * set.weight), 0);
+      if (total > pbTotal) pbTotal = total;
+    });
+
     const div = document.createElement("div");
     div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
 
-    // Just show exercise name (no click to detail)
+    // Exercise name
     const nameSpan = document.createElement("span");
     nameSpan.textContent = ex.name;
     nameSpan.className = "flex-1";
     div.appendChild(nameSpan);
+
+    // PB
+    const pbSpan = document.createElement("span");
+    pbSpan.textContent = `PB: ${pbTotal}`;
+    pbSpan.className = "text-yellow-400 font-bold ml-2";
+    div.appendChild(pbSpan);
 
     // Edit button
     const editBtn = document.createElement("button");
