@@ -3,78 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <title>Gym Tracker</title>
+  <!-- 1️⃣ Viewport for mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4">
+<body class="bg-gray-900 text-white min-h-screen p-4 overflow-y-auto">
 
   <!-- Supabase -->
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     window.supabase = createClient(
       "https://tilhxllfluynrubuspyy.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbGh4bGxmbHV5bnJ1YnVzcHl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODA1MDUsImV4cCI6MjA4MzI1NjUwNX0.0CIZfIgFDVWFrn50n-qvjUMPVGSiEyQzeas0AmmV0wU"
+      "YOUR_ANON_KEY_HERE"
     );
   </script>
 
   <script type="module" src="app.js" defer></script>
 
   <!-- HOME -->
-  <div id="home-page" class="flex flex-col gap-4">
-    <h1 class="text-3xl font-bold">Gym Tracker</h1>
-    <button id="view-workouts-btn" class="bg-blue-700 px-4 py-2 rounded">View Workouts</button>
-    <button id="start-workout-btn" class="bg-green-700 px-4 py-2 rounded">Start Workout</button>
-    <p id="quote-home" class="text-gray-400 italic"></p>
+  <div id="home-page" class="flex flex-col gap-6 items-center">
+    <h1 class="text-4xl sm:text-5xl font-bold text-center">Gym Tracker</h1>
+    <div class="flex flex-col gap-4 w-full max-w-md">
+      <button id="view-workouts-btn" class="bg-blue-700 px-4 py-3 rounded text-lg sm:text-xl">View Workouts</button>
+      <button id="start-workout-btn" class="bg-green-700 px-4 py-3 rounded text-lg sm:text-xl">Start Workout</button>
+    </div>
+    <p id="quote-home" class="text-gray-300 italic text-center mt-4"></p>
   </div>
 
   <!-- VIEW WORKOUTS -->
-  <div id="view-workouts-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded">Back</button>
-    <h2 class="text-2xl font-bold">Your Workouts</h2>
-    <div id="workouts-list" class="flex flex-col gap-2"></div>
-    <button id="create-workout-btn" class="bg-blue-700 px-4 py-2 rounded">Create Workout</button>
-    <p id="quote-view" class="text-gray-400 italic"></p>
+  <div id="view-workouts-page" class="hidden flex flex-col gap-3 items-center">
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
+    <h2 class="text-3xl sm:text-4xl font-bold text-center">Your Workouts</h2>
+    <div id="workouts-list" class="flex flex-col gap-2 w-full max-w-md"></div>
+    <button id="create-workout-btn" class="bg-blue-700 px-4 py-3 rounded text-lg sm:text-xl mt-2">Create Workout</button>
+    <p id="quote-view" class="text-gray-300 italic text-center mt-2"></p>
   </div>
 
   <!-- VIEW EXERCISES -->
-  <div id="view-exercises-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded">Back</button>
-    <h2 id="selected-workout-title" class="text-2xl font-bold"></h2>
-    <div id="exercises-list" class="flex flex-col gap-2"></div>
-    <button id="add-exercise-btn" class="bg-blue-700 px-4 py-2 rounded">Add Exercise</button>
-    <p id="quote-exercises" class="text-gray-400 italic"></p>
-  </div>
-
-  <!-- START WORKOUT -->
-  <div id="start-workout-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded">Back</button>
-    <h2 class="text-2xl font-bold">Select Workout</h2>
-    <div id="start-workout-list" class="flex flex-col gap-2"></div>
-    <button id="finish-workout-btn" class="bg-green-700 px-4 py-2 rounded mt-4">Finish Workout</button>
-    <p id="quote-start" class="text-gray-400 italic"></p>
-  </div>
-
-  <!-- EXERCISE DETAIL -->
-  <div id="exercise-detail-page" class="hidden flex flex-col gap-2">
-    <button class="back-btn bg-gray-800 px-3 py-2 rounded">Back</button>
-    <h2 id="exercise-title" class="text-2xl font-bold"></h2>
-
-    <!-- Timer -->
-    <div id="timer-container" class="flex items-center gap-2 mb-2">
-      <label for="timer-input" class="font-bold">Rest Timer:</label>
-      <input id="timer-input" type="number" min="0" class="w-16 p-1 text-black" value="90">
-      <span id="timer-display" class="text-yellow-400">01:30</span>
-      <button id="start-timer-btn" class="bg-blue-700 px-2 py-1 rounded">Start</button>
-      <button id="reset-timer-btn" class="bg-gray-700 px-2 py-1 rounded">Reset</button>
-    </div>
-
-    <div id="sets-container" class="flex flex-col gap-2"></div>
-
-    <textarea id="exercise-note" class="p-2 rounded text-black" placeholder="Notes"></textarea>
-    <button id="save-exercise-note" class="bg-blue-700 px-4 py-2 rounded">Save</button>
-
-    <p id="exercise-pb" class="text-yellow-400 font-bold"></p>
-    <p id="quote-exercise" class="text-gray-400 italic"></p>
-  </div>
-
-</body>
-</html>
+  <div id="view-exercises-page" class="hidden flex flex-col gap-3 items-center">
+    <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
+    <h2 id="selected-workout-title" class="text-3xl sm:text-4xl font-bold text-center"></h2>
+    <div id="exercises-list" class="flex flex-col gap-2 w-full
