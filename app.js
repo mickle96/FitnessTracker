@@ -270,20 +270,20 @@ async function openExerciseDetail(ex) {
     .order("created_at", { ascending: false })
     .limit(4) || [];
 
-  for (let i = 0; i < 4; i++) {
-    const lastSet = lastSets.find(s => s.sets === i);
-    const repsValue = lastSet?.reps || "";
-    const weightValue = lastSet?.weight || "";
+for (let i = 0; i < 4; i++) {
+  const lastSet = lastSets.find(s => s.sets === i); // sets = 0-3
+  const repsValue = lastSet?.reps || '';
+  const weightValue = lastSet?.weight || '';
 
-    const div = document.createElement("div");
-    div.className = "flex flex-col sm:flex-row gap-2 items-center bg-gray-700 p-2 rounded";
-    div.innerHTML = `
-      <label class="font-bold w-24">${i === 0 ? "Warm-up" : "Set " + i}:</label>
-      <input type="number" placeholder="Reps" class="w-full sm:w-20 p-2 text-black text-lg" value="${repsValue}" style="color:${repsValue ? 'grey' : 'black'}">
-      <input type="number" placeholder="Kg" class="w-full sm:w-20 p-2 text-black text-lg" value="${weightValue}" style="color:${weightValue ? 'grey' : 'black'}">
-    `;
-    setsContainer.appendChild(div);
-  }
+  const div = document.createElement("div");
+  div.className = "flex items-center gap-2"; // make everything horizontal
+  div.innerHTML = `
+    <span class="font-bold w-20">${i === 0 ? "Warm-up" : "Set " + i}:</span>
+    <input type="number" placeholder="Reps" class="w-16 p-1 text-black" value="${repsValue}" style="color:${repsValue ? 'grey' : 'black'}">
+    <input type="number" placeholder="Kg" class="w-16 p-1 text-black" value="${weightValue}" style="color:${weightValue ? 'grey' : 'black'}">
+  `;
+  setsContainer.appendChild(div);
+}
 
   // Last note
   const { data: lastNotes } = await supabase
