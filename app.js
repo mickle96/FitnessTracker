@@ -268,6 +268,7 @@ async function openExerciseDetail(ex) {
   const setsContainer = document.getElementById("sets-container");
   setsContainer.innerHTML = "";
 
+  // Fetch last 4 sets for this exercise
   const { data: lastSets } = await supabase
     .from("notes")
     .select("*")
@@ -275,30 +276,29 @@ async function openExerciseDetail(ex) {
     .order("created_at", { ascending: false })
     .limit(4) || [];
 
-  // Wrap headers in same flex layout as the sets
+  // Headers
   const headerDiv = document.createElement("div");
   headerDiv.className = "flex items-center gap-2 mb-2";
-
   headerDiv.innerHTML = `
     <span class="w-20"></span>
     <div class="w-16 text-center text-gray-300 font-semibold">Reps</div>
     <div class="w-16 text-center text-gray-300 font-semibold">Kg</div>
+    <div class="flex-1 text-right text-gray-400 font-semibold">Previous</div>
   `;
   setsContainer.appendChild(headerDiv);
 
   for (let i = 0; i < 4; i++) {
     const lastSet = lastSets.find(s => s.sets === i);
-    const repsValue = lastSet?.reps || '';
-    const weightValue = lastSet?.weight || '';
+    const prevText = lastSet ? `${lastSet.reps} × ${lastSet.weight}kg` : '-';
 
     const div = document.createElement("div");
     div.className = "flex items-center gap-2 mb-1";
 
-    // Keep labels and inputs aligned exactly
     div.innerHTML = `
       <span class="font-bold w-20">${i === 0 ? "Warm-up" : "Set " + i}:</span>
-      <input type="number" placeholder="Reps" class="w-16 p-1 text-black border border-gray-300 rounded text-center" value="${repsValue}" style="color:${repsValue ? 'grey' : 'black'}">
-      <input type="number" placeholder="Kg" class="w-16 p-1 text-black border border-gray-300 rounded text-center" value="${weightValue}" style="color:${weightValue ? 'grey' : 'black'}">
+      <input type="number" placeholder="Reps" class="w-16 p-1 text-black border border-gray-300 rounded text-center">
+      <input type="number" placeholder="Kg" class="w-16 p-1 text-black border border-gray-300 rounded text-center">
+      <div class="flex-1 text-right text-gray-400 text-sm">${prevText}</div>
     `;
     setsContainer.appendChild(div);
   }
