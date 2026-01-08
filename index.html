@@ -39,7 +39,7 @@
   <!-- VIEW EXERCISES -->
   <div id="view-exercises-page" class="hidden flex flex-col gap-3">
     <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
-    <h2 id="selected-workout-title" class="text-3xl font-bold text-center"></h2>
+    <h2 id="selected-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
     <div id="exercises-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
     <button id="add-exercise-btn" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Add Exercise</button>
     <p id="quote-exercises" class="text-gray-400 italic text-center"></p>
@@ -48,9 +48,9 @@
   <!-- START WORKOUT -->
   <div id="start-workout-page" class="hidden flex flex-col gap-3">
     <button class="back-btn bg-gray-800 px-3 py-2 rounded text-lg">Back</button>
-    <h2 class="text-3xl font-bold text-center">Select Workout</h2>
+    <h2 id="start-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
     <div id="start-workout-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
-    <button id="finish-workout-btn" class="bg-green-700 px-4 py-3 rounded text-xl w-full mt-3">Finish Workout</button>
+    <button id="finish-workout-btn" class="bg-green-700 px-4 py-3 rounded text-xl w-full mt-3 hidden">Finish Workout</button>
     <p id="quote-start" class="text-gray-400 italic text-center"></p>
   </div>
 
@@ -75,7 +75,7 @@
 
     <!-- Notes -->
     <textarea id="exercise-note" class="p-3 rounded text-black text-lg w-full" placeholder="Notes"></textarea>
-    <button id="save-exercise-note" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Save Note</button>
+    <button id="save-exercise-note" class="bg-blue-700 px-4 py-3 rounded text-xl w-full">Save</button>
 
     <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
     <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
