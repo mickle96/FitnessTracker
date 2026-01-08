@@ -435,3 +435,4 @@ document.getElementById("finish-workout-btn").onclick = async () => {
   alert(`Workout finished!\nPBs today: ${pbCount}`);
 };
 }
+
