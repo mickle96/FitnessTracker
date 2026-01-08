@@ -153,12 +153,21 @@ async function loadExercises(workout) {
       sessions[date].push(n);
     });
 
-    // 3️⃣ Calculate max total (PB) for this exercise
-    let pbTotal = 0;
-    Object.values(sessions).forEach(session => {
-      const total = session.reduce((sum, set) => sum + (set.reps * set.weight), 0);
-      if (total > pbTotal) pbTotal = total;
-    });
+  // 3️⃣ Find PB (highest weight → then highest reps×weight)
+let pb = { weight: 0, reps: 0, total: 0 };
+
+allNotes.forEach(n => {
+  const total = n.reps * n.weight;
+
+  // Priority 1: highest weight
+  if (n.weight > pb.weight) {
+    pb = { weight: n.weight, reps: n.reps, total };
+  }
+  // Priority 2: if weights equal, choose highest total (reps × weight)
+  else if (n.weight === pb.weight && total > pb.total) {
+    pb = { weight: n.weight, reps: n.reps, total };
+  }
+});
 
     const div = document.createElement("div");
     div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
@@ -169,11 +178,17 @@ async function loadExercises(workout) {
     nameSpan.className = "flex-1";
     div.appendChild(nameSpan);
 
-    // PB
-    const pbSpan = document.createElement("span");
-    pbSpan.textContent = `PB: ${pbTotal}`;
-    pbSpan.className = "text-yellow-400 font-bold ml-2";
-    div.appendChild(pbSpan);
+   // PB
+  const pbSpan = document.createElement("span");
+
+  if (pb.weight === 0 && pb.reps === 0) {
+  pbSpan.textContent = "PB: —";
+  } else {
+   pbSpan.textContent = `PB: ${pb.weight}kg × ${pb.reps}`;
+  }
+
+  pbSpan.className = "text-yellow-400 font-bold ml-2";
+  div.appendChild(pbSpan);
 
     // Edit button
     const editBtn = document.createElement("button");
@@ -214,20 +229,27 @@ document.getElementById("add-exercise-btn").onclick = async () => {
 
 // ---------------- START WORKOUT ----------------
 async function loadStartWorkout() {
+  currentSection = "start-workout";
   showPage("start-workout-page");
   document.getElementById("quote-start").textContent = randomQuote();
 
-  const { data } = await supabase.from("workouts").select("*");
+  // Show the title as "Select Workout"
+  document.getElementById("start-workout-title").textContent = "Select Workout";
+
+  const { data: workouts } = await supabase.from("workouts").select("*");
   const list = document.getElementById("start-workout-list");
   list.innerHTML = "";
 
-  data.forEach(workout => {
+  workouts.forEach(workout => {
     const div = document.createElement("div");
     div.className = "p-3 bg-gray-800 rounded cursor-pointer";
     div.textContent = workout.name;
-    div.onclick = () => loadWorkoutExercises(workout);
+    div.onclick = () => loadWorkoutExercises(workout); // show exercises
     list.appendChild(div);
   });
+
+  // Hide finish button on workout list screen
+  document.getElementById("finish-workout-btn").classList.add("hidden");
 }
 
 // ---------------- WORKOUT EXERCISES ----------------
@@ -237,19 +259,32 @@ async function loadWorkoutExercises(workout) {
 
   showPage("start-workout-page");
 
-  const { data } = await supabase.from("exercises").select("*").eq("workout_id", workout.id);
+  // Change title to "Select Exercise"
+  document.getElementById("start-workout-title").textContent = "Select Exercise";
+
+  const { data: exercises } = await supabase
+    .from("exercises")
+    .select("*")
+    .eq("workout_id", workout.id);
+
   const list = document.getElementById("start-workout-list");
   list.innerHTML = "";
 
-  data.forEach(ex => {
+  exercises.forEach(ex => {
     const div = document.createElement("div");
     div.className = "p-3 bg-gray-800 rounded cursor-pointer";
     div.textContent = ex.name;
     div.onclick = () => openExerciseDetail(ex);
     list.appendChild(div);
   });
-}
 
+  // Show finish button only if there are exercises
+  if (exercises && exercises.length > 0) {
+    document.getElementById("finish-workout-btn").classList.remove("hidden");
+  } else {
+    document.getElementById("finish-workout-btn").classList.add("hidden");
+  }
+}
 // ---------------- EXERCISE DETAIL + TIMER ----------------
 async function openExerciseDetail(ex) {
   currentExercise = ex;
@@ -329,4 +364,74 @@ for (let i = 0; i < 4; i++) {
   };
 
   updateTimerDisplay();
+
+  // ---------------- SAVE EXERCISE (SETS + NOTE) ----------------
+document.getElementById("save-exercise-note").onclick = async () => {
+  if (!currentExercise) return;
+
+  const setsContainer = document.getElementById("sets-container");
+  const note = document.getElementById("exercise-note").value;
+
+  const setDivs = Array.from(setsContainer.children);
+
+  // Save 4 sets (warm-up + 3 sets)
+  for (let i = 0; i < setDivs.length; i++) {
+    const inputs = setDivs[i].querySelectorAll("input");
+    const reps = parseInt(inputs[0].value) || 0;
+    const weight = parseFloat(inputs[1].value) || 0;
+
+    // Only save if user actually filled something
+    if (reps > 0 || weight > 0 || note.trim() !== "") {
+      await supabase.from("notes").insert({
+        exercise_id: currentExercise.id,
+        sets: i,       // 0 = warm-up, 1 = set 1, etc.
+        reps,
+        weight,
+        note
+      });
+    }
+  }
+
+  alert("Saved!");
+};
+
+// ---------------- FINISH WORKOUT ----------------
+document.getElementById("finish-workout-btn").onclick = async () => {
+  // Count PBs achieved in this session
+  const { data: allNotes } = await supabase
+    .from("notes")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  let pbCount = 0;
+
+  // Group notes by exercise
+  const byExercise = {};
+  allNotes.forEach(n => {
+    if (!byExercise[n.exercise_id]) byExercise[n.exercise_id] = [];
+    byExercise[n.exercise_id].push(n);
+  });
+
+  // For each exercise, check if today's total > previous max
+  for (const exId in byExercise) {
+    const entries = byExercise[exId];
+
+    const today = entries.filter(n =>
+      n.created_at.split("T")[0] === new Date().toISOString().split("T")[0]
+    );
+
+    if (today.length === 0) continue;
+
+    const beforeToday = entries.filter(n =>
+      n.created_at.split("T")[0] !== new Date().toISOString().split("T")[0]
+    );
+
+    const todayMax = Math.max(...today.map(n => n.reps * n.weight), 0);
+    const beforeMax = Math.max(...beforeToday.map(n => n.reps * n.weight), 0);
+
+    if (todayMax > beforeMax) pbCount++;
+  }
+
+  alert(`Workout finished!\nPBs today: ${pbCount}`);
+};
 }
