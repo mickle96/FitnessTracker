@@ -21,75 +21,104 @@ function randomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
 }
 
-// ---------------- BACK BUTTON LOGIC ----------------
+// ---------------- BACK BUTTON ----------------
 document.addEventListener("click", e => {
   if (!e.target.classList.contains("back-btn")) return;
 
   switch (currentSection) {
     case "view-workouts":
-      showPage("home-page"); currentSection="home"; break;
+      showPage("home-page");
+      currentSection = "home";
+      break;
     case "view-exercises":
-      loadWorkouts(); currentSection="view-workouts"; break;
+      loadWorkouts();
+      currentSection = "view-workouts";
+      break;
     case "start-workout":
-      showPage("home-page"); currentSection="home"; break;
+      showPage("home-page");
+      currentSection = "home";
+      break;
     case "workout-exercises":
-      loadStartWorkout(); currentSection="start-workout"; break;
+      loadStartWorkout();
+      currentSection = "start-workout";
+      break;
     case "exercise-detail":
-      loadWorkoutExercises(currentWorkout); currentSection="workout-exercises"; break;
+      loadWorkoutExercises(currentWorkout);
+      currentSection = "workout-exercises";
+      break;
   }
 });
 
 // ---------------- HOME ----------------
-document.getElementById("view-workouts-btn")?.addEventListener("click", () => {
-  currentSection = "view-workouts"; loadWorkouts();
-});
+document.getElementById("view-workouts-btn").onclick = () => {
+  currentSection = "view-workouts";
+  loadWorkouts();
+};
 
-document.getElementById("start-workout-btn")?.addEventListener("click", () => {
-  currentSection = "start-workout"; loadStartWorkout();
-});
+document.getElementById("start-workout-btn").onclick = () => {
+  currentSection = "start-workout";
+  loadStartWorkout();
+};
 
-document.getElementById("quote-home") && (document.getElementById("quote-home").textContent = randomQuote());
+document.getElementById("quote-home").textContent = randomQuote();
 
 // ---------------- VIEW WORKOUTS ----------------
 async function loadWorkouts() {
   showPage("view-workouts-page");
-  const quote = document.getElementById("quote-view"); if (quote) quote.textContent = randomQuote();
+  document.getElementById("quote-view").textContent = randomQuote();
 
-  const { data } = await supabase.from("workouts").select("*").order("created_at");
-  const list = document.getElementById("workouts-list"); if (!list) return;
+  const { data } = await supabase.from("workouts").select("*").order("created_at", { ascending: true });
+  const list = document.getElementById("workouts-list");
   list.innerHTML = "";
 
   data.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-2 bg-gray-800 rounded flex justify-between items-center";
-    div.innerHTML = `
-      <span class="cursor-pointer">${workout.name}</span>
-      <div class="flex gap-1">
-        <button class="edit-btn bg-yellow-500 px-2 py-1 rounded text-black">Edit</button>
-        <button class="delete-btn bg-red-600 px-2 py-1 rounded text-black">Del</button>
-      </div>
-    `;
-    div.querySelector("span")?.addEventListener("click", () => loadExercises(workout));
-    div.querySelector(".edit-btn")?.addEventListener("click", async () => {
-      const newName = prompt("Workout name", workout.name); if (!newName) return;
+    div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
+
+    // Workout name
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = workout.name;
+    nameSpan.className = "flex-1 cursor-pointer";
+    nameSpan.onclick = () => loadExercises(workout);
+    div.appendChild(nameSpan);
+
+    // Edit button
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "✏️";
+    editBtn.className = "ml-2 px-2 py-1 bg-yellow-600 rounded text-sm";
+    editBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const newName = prompt("Edit workout name", workout.name);
+      if (!newName) return;
       await supabase.from("workouts").update({ name: newName }).eq("id", workout.id);
       loadWorkouts();
-    });
-    div.querySelector(".delete-btn")?.addEventListener("click", async () => {
-      if (confirm("Delete this workout?")) {
-        await supabase.from("workouts").delete().eq("id", workout.id);
-        loadWorkouts();
-      }
-    });
+    };
+    div.appendChild(editBtn);
+
+    // Delete button
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️";
+    delBtn.className = "ml-2 px-2 py-1 bg-red-600 rounded text-sm";
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm("Delete this workout?")) return;
+      await supabase.from("workouts").delete().eq("id", workout.id);
+      loadWorkouts();
+    };
+    div.appendChild(delBtn);
+
     list.appendChild(div);
   });
+
+  // Create workout button handled separately
 }
 
-document.getElementById("create-workout-btn")?.addEventListener("click", async () => {
-  const name = prompt("Workout name"); if (!name) return;
+document.getElementById("create-workout-btn").onclick = async () => {
+  const name = prompt("Workout name");
+  if (!name) return;
   await supabase.from("workouts").insert({ name });
   loadWorkouts();
-});
+};
 
 // ---------------- VIEW EXERCISES ----------------
 async function loadExercises(workout) {
@@ -97,74 +126,78 @@ async function loadExercises(workout) {
   currentSection = "view-exercises";
 
   showPage("view-exercises-page");
-  document.getElementById("selected-workout-title") && (document.getElementById("selected-workout-title").textContent = workout.name);
-  document.getElementById("quote-exercises") && (document.getElementById("quote-exercises").textContent = randomQuote());
+  document.getElementById("selected-workout-title").textContent = workout.name;
+  document.getElementById("quote-exercises").textContent = randomQuote();
 
-  const { data: exercises } = await supabase.from("exercises").select("*").eq("workout_id", workout.id);
-  const list = document.getElementById("exercises-list"); if (!list) return;
+  const { data: exercises } = await supabase
+    .from("exercises")
+    .select("*")
+    .eq("workout_id", workout.id);
+
+  const list = document.getElementById("exercises-list");
   list.innerHTML = "";
 
   for (const ex of exercises) {
-    // Calculate PB
-    const { data: allNotes } = await supabase.from("notes").select("*").eq("exercise_id", ex.id);
-    let pbTotal = 0;
-    const sessionMap = {};
-    allNotes.forEach(n => {
-      const key = n.created_at.split("T")[0];
-      if (!sessionMap[key]) sessionMap[key] = [];
-      sessionMap[key].push(n);
-    });
-    Object.values(sessionMap).forEach(session => {
-      const total = session.reduce((sum,s)=>sum+s.reps*s.weight,0);
-      if (total>pbTotal) pbTotal=total;
-    });
-
     const div = document.createElement("div");
-    div.className = "p-2 bg-gray-800 rounded flex justify-between items-center";
-    div.innerHTML = `
-      <span class="cursor-pointer">${ex.name}</span>
-      <span class="text-yellow-400 font-bold">PB: ${pbTotal}</span>
-      <div class="flex gap-1">
-        <button class="edit-ex-btn bg-yellow-500 px-2 py-1 rounded text-black">Edit</button>
-        <button class="delete-ex-btn bg-red-600 px-2 py-1 rounded text-black">Del</button>
-      </div>
-    `;
-    div.querySelector("span")?.addEventListener("click", () => openExerciseDetail(ex));
-    div.querySelector(".edit-ex-btn")?.addEventListener("click", async () => {
-      const newName = prompt("Exercise name", ex.name); if (!newName) return;
+    div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
+
+    // Just show exercise name (no click to detail)
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = ex.name;
+    nameSpan.className = "flex-1";
+    div.appendChild(nameSpan);
+
+    // Edit button
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "✏️";
+    editBtn.className = "ml-2 px-2 py-1 bg-yellow-600 rounded text-sm";
+    editBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const newName = prompt("Edit exercise name", ex.name);
+      if (!newName) return;
       await supabase.from("exercises").update({ name: newName }).eq("id", ex.id);
       loadExercises(workout);
-    });
-    div.querySelector(".delete-ex-btn")?.addEventListener("click", async () => {
-      if (confirm("Delete this exercise?")) {
-        await supabase.from("exercises").delete().eq("id", ex.id);
-        loadExercises(workout);
-      }
-    });
+    };
+    div.appendChild(editBtn);
+
+    // Delete button
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑️";
+    delBtn.className = "ml-2 px-2 py-1 bg-red-600 rounded text-sm";
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!confirm("Delete this exercise?")) return;
+      await supabase.from("exercises").delete().eq("id", ex.id);
+      loadExercises(workout);
+    };
+    div.appendChild(delBtn);
+
     list.appendChild(div);
   }
 }
 
-document.getElementById("add-exercise-btn")?.addEventListener("click", async () => {
-  const name = prompt("Exercise name"); if (!name) return;
+// ---------------- Add Exercise ----------------
+document.getElementById("add-exercise-btn").onclick = async () => {
+  const name = prompt("Exercise name");
+  if (!name) return;
   await supabase.from("exercises").insert({ name, workout_id: currentWorkout.id });
   loadExercises(currentWorkout);
-});
+};
 
 // ---------------- START WORKOUT ----------------
 async function loadStartWorkout() {
   showPage("start-workout-page");
-  document.getElementById("quote-start") && (document.getElementById("quote-start").textContent = randomQuote());
+  document.getElementById("quote-start").textContent = randomQuote();
 
   const { data } = await supabase.from("workouts").select("*");
-  const list = document.getElementById("start-workout-list"); if (!list) return;
+  const list = document.getElementById("start-workout-list");
   list.innerHTML = "";
 
   data.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-2 bg-gray-800 rounded cursor-pointer";
+    div.className = "p-3 bg-gray-800 rounded cursor-pointer";
     div.textContent = workout.name;
-    div.addEventListener("click", () => loadWorkoutExercises(workout));
+    div.onclick = () => loadWorkoutExercises(workout);
     list.appendChild(div);
   });
 }
@@ -173,85 +206,99 @@ async function loadStartWorkout() {
 async function loadWorkoutExercises(workout) {
   currentWorkout = workout;
   currentSection = "workout-exercises";
+
   showPage("start-workout-page");
 
   const { data } = await supabase.from("exercises").select("*").eq("workout_id", workout.id);
-  const list = document.getElementById("start-workout-list"); if (!list) return;
+  const list = document.getElementById("start-workout-list");
   list.innerHTML = "";
 
   data.forEach(ex => {
     const div = document.createElement("div");
-    div.className = "p-2 bg-gray-800 rounded cursor-pointer";
+    div.className = "p-3 bg-gray-800 rounded cursor-pointer";
     div.textContent = ex.name;
-    div.addEventListener("click", () => openExerciseDetail(ex));
+    div.onclick = () => openExerciseDetail(ex);
     list.appendChild(div);
   });
 }
 
-// ---------------- EXERCISE DETAIL ----------------
+// ---------------- EXERCISE DETAIL + TIMER ----------------
 async function openExerciseDetail(ex) {
   currentExercise = ex;
   currentSection = "exercise-detail";
 
   showPage("exercise-detail-page");
-  document.getElementById("exercise-title") && (document.getElementById("exercise-title").textContent = ex.name);
-  document.getElementById("quote-exercise") && (document.getElementById("quote-exercise").textContent = randomQuote());
+  document.getElementById("exercise-title").textContent = ex.name;
+  document.getElementById("quote-exercise").textContent = randomQuote();
 
-  const setsContainer = document.getElementById("sets-container"); if (!setsContainer) return;
+  const setsContainer = document.getElementById("sets-container");
   setsContainer.innerHTML = "";
 
-  // Load last 4 sets
-  const { data: lastSets } = await supabase.from("notes").select("*").eq("exercise_id", ex.id).order("created_at", { ascending: false }).limit(4) || [];
+  // Load last 4 sets for this exercise
+  const { data: lastSets } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("exercise_id", ex.id)
+    .order("created_at", { ascending: false })
+    .limit(4) || [];
 
   for (let i = 0; i < 4; i++) {
     const lastSet = lastSets.find(s => s.sets === i);
-    const repsValue = lastSet?.reps || '';
-    const weightValue = lastSet?.weight || '';
+    const repsValue = lastSet?.reps || "";
+    const weightValue = lastSet?.weight || "";
 
     const div = document.createElement("div");
+    div.className = "flex flex-col sm:flex-row gap-2 items-center bg-gray-700 p-2 rounded";
     div.innerHTML = `
-      <label class="mr-2 font-bold">${i===0?"Warm-up":"Set "+i}:</label>
-      <input type="number" placeholder="Reps" class="w-16 p-1 text-black" value="${repsValue}" style="color:${repsValue?'grey':'black'}">
-      <input type="number" placeholder="Kg" class="w-16 p-1 text-black" value="${weightValue}" style="color:${weightValue?'grey':'black'}">
+      <label class="font-bold w-24">${i === 0 ? "Warm-up" : "Set " + i}:</label>
+      <input type="number" placeholder="Reps" class="w-full sm:w-20 p-2 text-black text-lg" value="${repsValue}" style="color:${repsValue ? 'grey' : 'black'}">
+      <input type="number" placeholder="Kg" class="w-full sm:w-20 p-2 text-black text-lg" value="${weightValue}" style="color:${weightValue ? 'grey' : 'black'}">
     `;
     setsContainer.appendChild(div);
   }
 
-  // Load last note
-  const { data: lastNotes } = await supabase.from("notes").select("*").eq("exercise_id", ex.id).order("created_at", { ascending: false }).limit(1) || [];
-  const lastNote = lastNotes?.[0];
-  document.getElementById("exercise-note") && (document.getElementById("exercise-note").value = lastNote?.note || "");
+  // Last note
+  const { data: lastNotes } = await supabase
+    .from("notes")
+    .select("*")
+    .eq("exercise_id", ex.id)
+    .order("created_at", { ascending: false })
+    .limit(1) || [];
+
+  document.getElementById("exercise-note").value = lastNotes?.[0]?.note || "";
 
   // Timer
   let timerInterval = null;
-  let timerSeconds = 90;
-  const timerInput = document.getElementById("timer-input");
-  const timerDisplay = document.getElementById("timer-display");
+  let timerSeconds = parseInt(document.getElementById("timer-input").value) || 90;
+  const display = document.getElementById("timer-display");
 
   function updateTimerDisplay() {
-    const m = String(Math.floor(timerSeconds/60)).padStart(2,'0');
-    const s = String(timerSeconds%60).padStart(2,'0');
-    if(timerDisplay) timerDisplay.textContent = `${m}:${s}`;
+    const m = String(Math.floor(timerSeconds / 60)).padStart(2, "0");
+    const s = String(timerSeconds % 60).padStart(2, "0");
+    display.textContent = `${m}:${s}`;
   }
 
-  document.getElementById("start-timer-btn")?.addEventListener("click", () => {
-    const input = parseInt(timerInput.value);
-    if(!isNaN(input) && input>0) timerSeconds = input;
+  document.getElementById("start-timer-btn").onclick = () => {
+    const inputSeconds = parseInt(document.getElementById("timer-input").value);
+    if (!isNaN(inputSeconds) && inputSeconds > 0) timerSeconds = inputSeconds;
     updateTimerDisplay();
-    if(timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(()=>{
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
       timerSeconds--;
       updateTimerDisplay();
-      if(timerSeconds<=0){clearInterval(timerInterval); timerInterval=null; alert("Time's up! ⏱️");}
-    },1000);
-  });
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        alert("Time's up! ⏱️");
+      }
+    }, 1000);
+  };
 
-  document.getElementById("reset-timer-btn")?.addEventListener("click", () => {
-    clearInterval(timerInterval); timerInterval=null;
-    const input = parseInt(timerInput.value);
-    timerSeconds = (!isNaN(input) && input>0)?input:90;
+  document.getElementById("reset-timer-btn").onclick = () => {
+    clearInterval(timerInterval);
+    const inputSeconds = parseInt(document.getElementById("timer-input").value);
+    timerSeconds = (!isNaN(inputSeconds) && inputSeconds > 0) ? inputSeconds : 90;
     updateTimerDisplay();
-  });
+  };
 
   updateTimerDisplay();
 }
