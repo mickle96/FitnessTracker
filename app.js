@@ -73,19 +73,19 @@ async function loadWorkouts() {
 
   data.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
+    div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800 cursor-pointer";
 
     // Workout name
     const nameSpan = document.createElement("span");
     nameSpan.textContent = workout.name;
-    nameSpan.className = "flex-1 cursor-pointer";
+    nameSpan.className = "flex-1";
     nameSpan.onclick = () => loadExercises(workout);
     div.appendChild(nameSpan);
 
     // Edit button
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
-    editBtn.className = "ml-2 px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors duration-200";
+    editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
     editBtn.onclick = async (e) => {
       e.stopPropagation();
       const newName = prompt("Edit workout name", workout.name);
@@ -98,7 +98,7 @@ async function loadWorkouts() {
     // Delete button
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
-    delBtn.className = "ml-2 px-2 py-1 bg-red-600 hover:bg-red-500 rounded text-sm text-white transition-colors duration-200";
+    delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
     delBtn.onclick = async (e) => {
       e.stopPropagation();
       if (!confirm("Delete this workout?")) return;
@@ -153,7 +153,7 @@ async function loadExercises(workout) {
     });
 
     const div = document.createElement("div");
-    div.className = "p-3 bg-gray-800 rounded flex justify-between items-center";
+    div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800";
 
     // Exercise name
     const nameSpan = document.createElement("span");
@@ -170,7 +170,7 @@ async function loadExercises(workout) {
     // Edit button
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
-    editBtn.className = "ml-2 px-2 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm text-white transition-colors duration-200";
+    editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
     editBtn.onclick = async (e) => {
       e.stopPropagation();
       const newName = prompt("Edit exercise name", ex.name);
@@ -183,7 +183,7 @@ async function loadExercises(workout) {
     // Delete button
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
-    delBtn.className = "ml-2 px-2 py-1 bg-red-600 hover:bg-red-500 rounded text-sm text-white transition-colors duration-200";
+    delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
     delBtn.onclick = async (e) => {
       e.stopPropagation();
       if (!confirm("Delete this exercise?")) return;
@@ -216,7 +216,7 @@ async function loadStartWorkout() {
 
   workouts.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-3 bg-gray-800 rounded cursor-pointer hover:bg-gray-700 transition-colors duration-200";
+    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 transition-colors";
     div.textContent = workout.name;
     div.onclick = () => loadWorkoutExercises(workout);
     list.appendChild(div);
@@ -243,7 +243,7 @@ async function loadWorkoutExercises(workout) {
 
   exercises.forEach(ex => {
     const div = document.createElement("div");
-    div.className = "p-3 bg-gray-800 rounded cursor-pointer hover:bg-gray-700 transition-colors duration-200";
+    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800";
     div.textContent = ex.name;
     div.onclick = () => openExerciseDetail(ex);
     list.appendChild(div);
@@ -278,12 +278,12 @@ async function openExerciseDetail(ex) {
 
   // Headers
   const headerDiv = document.createElement("div");
-  headerDiv.className = "flex items-center gap-2 mb-2";
+  headerDiv.className = "flex items-center gap-2 mb-2 font-semibold text-gray-300";
   headerDiv.innerHTML = `
     <span class="w-20"></span>
-    <div class="w-16 text-center text-gray-300 font-semibold">Reps</div>
-    <div class="w-16 text-center text-gray-300 font-semibold">Kg</div>
-    <div class="flex-1 text-right text-gray-400 font-semibold">Previous</div>
+    <div class="w-16 text-center">Reps</div>
+    <div class="w-16 text-center">Kg</div>
+    <div class="flex-1 text-right">Previous</div>
   `;
   setsContainer.appendChild(headerDiv);
 
@@ -296,15 +296,12 @@ async function openExerciseDetail(ex) {
 
     div.innerHTML = `
       <span class="font-bold w-20">${i === 0 ? "Warm-up" : "Set " + i}:</span>
-      <input type="number" placeholder="Reps" class="w-16 p-1 text-black border border-gray-300 rounded text-center">
-      <input type="number" placeholder="Kg" class="w-16 p-1 text-black border border-gray-300 rounded text-center">
+      <input type="number" placeholder="Reps" class="w-16 p-1 text-center">
+      <input type="number" placeholder="Kg" class="w-16 p-1 text-center">
       <div class="flex-1 text-right text-gray-400 text-sm">${prevText}</div>
     `;
     setsContainer.appendChild(div);
   }
-}
-
-  // Note + timer code remains unchanged...
 
   // Timer
   let timerInterval = null;
@@ -316,11 +313,6 @@ async function openExerciseDetail(ex) {
     const s = String(timerSeconds % 60).padStart(2, "0");
     display.textContent = `${m}:${s}`;
   }
-
-  document.getElementById("start-timer-btn").className =
-    "bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded text-lg text-white cursor-pointer transition-colors duration-200";
-  document.getElementById("reset-timer-btn").className =
-    "bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-lg text-white cursor-pointer transition-colors duration-200";
 
   document.getElementById("start-timer-btn").onclick = () => {
     const inputSeconds = parseInt(document.getElementById("timer-input").value);
@@ -347,16 +339,12 @@ async function openExerciseDetail(ex) {
   updateTimerDisplay();
 
   // Save Exercise
-  document.getElementById("save-exercise-note").className =
-    "bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded text-xl w-full text-white cursor-pointer transition-colors duration-200";
-
   document.getElementById("save-exercise-note").onclick = async () => {
     if (!currentExercise) return;
 
     const setsContainer = document.getElementById("sets-container");
     const note = document.getElementById("exercise-note").value;
-
-    const setDivs = Array.from(setsContainer.children);
+    const setDivs = Array.from(setsContainer.children).slice(1); // skip header
 
     for (let i = 0; i < setDivs.length; i++) {
       const inputs = setDivs[i].querySelectorAll("input");
@@ -376,14 +364,11 @@ async function openExerciseDetail(ex) {
 
     alert("Saved!");
   };
-
+}
 
 // ---------------- FINISH WORKOUT ----------------
 document.getElementById("finish-workout-btn").onclick = async () => {
-  const { data: allNotes } = await supabase
-    .from("notes")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const { data: allNotes } = await supabase.from("notes").select("*").order("created_at", { ascending: true });
 
   let pbCount = 0;
   const byExercise = {};
