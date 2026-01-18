@@ -136,26 +136,24 @@ async function loadExercises(workout) {
   list.innerHTML = "";
 
   for (const ex of exercises) {
-    // Fetch all previous notes for PB
-    const { data: allNotes } = await supabase
-      .from("notes")
+    // Fetch all sets for PB
+    const { data: allSets } = await supabase
+      .from("sets")
       .select("*")
       .eq("exercise_id", ex.id)
       .order("created_at", { ascending: true });
 
-    // Calculate PB
     let pb = { weight: 0, reps: 0, total: 0 };
-    allNotes.forEach(n => {
-      const total = n.reps * n.weight;
-      if (n.weight > pb.weight || (n.weight === pb.weight && total > pb.total)) {
-        pb = { weight: n.weight, reps: n.reps, total };
+    allSets.forEach(s => {
+      const total = s.reps * s.weight;
+      if (s.weight > pb.weight || (s.weight === pb.weight && total > pb.total)) {
+        pb = { weight: s.weight, reps: s.reps, total };
       }
     });
 
     const div = document.createElement("div");
     div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800";
 
-    // Exercise name
     const nameSpan = document.createElement("span");
     nameSpan.textContent = ex.name;
     nameSpan.className = "flex-1";
@@ -256,7 +254,7 @@ async function loadWorkoutExercises(workout) {
   }
 }
 
-// ---------------- EXERCISE DETAIL + TIMER ----------------
+// ---------------- EXERCISE DETAIL ----------------
 async function openExerciseDetail(ex) {
   currentExercise = ex;
   currentSection = "exercise-detail";
@@ -268,15 +266,28 @@ async function openExerciseDetail(ex) {
   const setsContainer = document.getElementById("sets-container");
   setsContainer.innerHTML = "";
 
-  // Fetch last 4 sets for this exercise
+  // Fetch last 4 sets
   const { data: lastSets } = await supabase
-    .from("notes")
+    .from("sets")
     .select("*")
     .eq("exercise_id", ex.id)
     .order("created_at", { ascending: false })
-    .limit(4) || [];
+    .limit(4);
 
-  // Headers
+  // Fetch latest note
+  const { data: lastNote, error } = await supabase
+  .from("exercise_notes")
+  .select("note, created_at")
+  .eq("exercise_id", ex.id)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+if (error) console.error(error);
+
+document.getElementById("exercise-note").value = lastNote ? lastNote.note : "";
+
+  // Header labels
   const headerDiv = document.createElement("div");
   headerDiv.className = "flex items-center gap-2 mb-2 font-semibold text-gray-300";
   headerDiv.innerHTML = `
@@ -293,7 +304,6 @@ async function openExerciseDetail(ex) {
 
     const div = document.createElement("div");
     div.className = "flex items-center gap-2 mb-1";
-
     div.innerHTML = `
       <span class="font-bold w-20">${i === 0 ? "Warm-up" : "Set " + i}:</span>
       <input type="number" placeholder="Reps" class="w-16 p-1 text-center">
@@ -303,7 +313,7 @@ async function openExerciseDetail(ex) {
     setsContainer.appendChild(div);
   }
 
-  // Timer
+  // ---------------- TIMER ----------------
   let timerInterval = null;
   let timerSeconds = parseInt(document.getElementById("timer-input").value) || 90;
   const display = document.getElementById("timer-display");
@@ -338,28 +348,34 @@ async function openExerciseDetail(ex) {
 
   updateTimerDisplay();
 
-  // Save Exercise
+  // ---------------- SAVE NOTE + SETS ----------------
   document.getElementById("save-exercise-note").onclick = async () => {
     if (!currentExercise) return;
 
-    const setsContainer = document.getElementById("sets-container");
-    const note = document.getElementById("exercise-note").value;
-    const setDivs = Array.from(setsContainer.children).slice(1); // skip header
+    const setsDivs = Array.from(setsContainer.children).slice(1);
+    const noteValue = document.getElementById("exercise-note").value;
 
-    for (let i = 0; i < setDivs.length; i++) {
-      const inputs = setDivs[i].querySelectorAll("input");
+    for (let i = 0; i < setsDivs.length; i++) {
+      const inputs = setsDivs[i].querySelectorAll("input");
       const reps = parseInt(inputs[0].value) || 0;
       const weight = parseFloat(inputs[1].value) || 0;
 
-      if (reps > 0 || weight > 0 || note.trim() !== "") {
-        await supabase.from("notes").insert({
+      if (reps > 0 || weight > 0) {
+        await supabase.from("sets").insert({
           exercise_id: currentExercise.id,
           sets: i,
           reps,
-          weight,
-          note
+          weight
         });
       }
+    }
+
+    // Save note separately
+    if (noteValue.trim() !== "") {
+      await supabase.from("exercise_notes").insert({
+        exercise_id: currentExercise.id,
+        note: noteValue
+      });
     }
 
     alert("Saved!");
@@ -368,13 +384,13 @@ async function openExerciseDetail(ex) {
 
 // ---------------- FINISH WORKOUT ----------------
 document.getElementById("finish-workout-btn").onclick = async () => {
-  const { data: allNotes } = await supabase.from("notes").select("*").order("created_at", { ascending: true });
+  const { data: allSets } = await supabase.from("sets").select("*");
 
   let pbCount = 0;
   const byExercise = {};
-  allNotes.forEach(n => {
-    if (!byExercise[n.exercise_id]) byExercise[n.exercise_id] = [];
-    byExercise[n.exercise_id].push(n);
+  allSets.forEach(s => {
+    if (!byExercise[s.exercise_id]) byExercise[s.exercise_id] = [];
+    byExercise[s.exercise_id].push(s);
   });
 
   for (const exId in byExercise) {
