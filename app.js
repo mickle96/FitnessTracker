@@ -48,7 +48,46 @@ document.addEventListener("click", e => {
       break;
   }
 });
+// ---------------- TIMER ----------------
+let timerInterval = null;
 
+function formatTime(sec) {
+  const m = String(Math.floor(sec / 60)).padStart(2, "0");
+  const s = String(sec % 60).padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+document.getElementById("start-timer-btn").onclick = () => {
+  const input = document.getElementById("timer-input");
+  const display = document.getElementById("timer-display");
+
+  let sec = parseInt(input.value);
+  if (isNaN(sec) || sec <= 0) return;
+
+  display.textContent = formatTime(sec);
+
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    sec--;
+    display.textContent = formatTime(sec);
+
+    if (sec <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }, 1000);
+};
+
+document.getElementById("reset-timer-btn").onclick = () => {
+  const input = document.getElementById("timer-input");
+  const display = document.getElementById("timer-display");
+
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+
+  display.textContent = formatTime(parseInt(input.value) || 0);
+};
 // ---------------- HOME ----------------
 document.getElementById("view-workouts-btn").onclick = () => {
   currentSection = "view-workouts";
