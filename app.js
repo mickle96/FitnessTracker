@@ -2,6 +2,7 @@
 let currentWorkout = null;
 let currentExercise = null;
 let currentSection = "home";
+let currentWorkoutSessionId = null; // <-- session ID for this workout
 
 const quotes = [
   "Push yourself because no one else is going to do it for you.",
@@ -75,12 +76,14 @@ async function loadWorkouts() {
     const div = document.createElement("div");
     div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800 cursor-pointer";
 
+    // Workout name
     const nameSpan = document.createElement("span");
     nameSpan.textContent = workout.name;
     nameSpan.className = "flex-1";
     nameSpan.onclick = () => loadExercises(workout);
     div.appendChild(nameSpan);
 
+    // Edit button
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
     editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
@@ -93,6 +96,7 @@ async function loadWorkouts() {
     };
     div.appendChild(editBtn);
 
+    // Delete button
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
     delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
@@ -133,6 +137,7 @@ async function loadExercises(workout) {
   list.innerHTML = "";
 
   for (const ex of exercises) {
+    // Fetch all sets for PB
     const { data: allSets } = await supabase
       .from("sets")
       .select("*")
@@ -155,11 +160,13 @@ async function loadExercises(workout) {
     nameSpan.className = "flex-1";
     div.appendChild(nameSpan);
 
+    // PB
     const pbSpan = document.createElement("span");
     pbSpan.textContent = (pb.weight === 0 && pb.reps === 0) ? "PB: —" : `PB: ${pb.weight}kg × ${pb.reps}`;
     pbSpan.className = "text-yellow-400 font-bold ml-2";
     div.appendChild(pbSpan);
 
+    // Edit button
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
     editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
@@ -172,6 +179,7 @@ async function loadExercises(workout) {
     };
     div.appendChild(editBtn);
 
+    // Delete button
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
     delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
@@ -209,25 +217,20 @@ async function loadStartWorkout() {
     const div = document.createElement("div");
     div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 transition-colors";
     div.textContent = workout.name;
-    div.onclick = () => startWorkoutSession(workout);
+    div.onclick = () => loadWorkoutExercises(workout);
     list.appendChild(div);
   });
 
   document.getElementById("finish-workout-btn").classList.add("hidden");
 }
 
-// ---------------- START WORKOUT SESSION ----------------
-function startWorkoutSession(workout) {
-  currentWorkout = {
-    ...workout,
-    session_id: crypto.randomUUID() // NEW session for this start
-  };
-  loadWorkoutExercises(currentWorkout);
-}
-
 // ---------------- WORKOUT EXERCISES ----------------
 async function loadWorkoutExercises(workout) {
+  currentWorkout = workout;
   currentSection = "workout-exercises";
+
+  // Generate new session ID for this workout
+  currentWorkoutSessionId = crypto.randomUUID();
 
   showPage("start-workout-page");
   document.getElementById("start-workout-title").textContent = "Select Exercise";
@@ -267,6 +270,7 @@ async function openExerciseDetail(ex) {
   const setsContainer = document.getElementById("sets-container");
   setsContainer.innerHTML = "";
 
+  // Fetch last 4 sets
   const { data: lastSets } = await supabase
     .from("sets")
     .select("*")
@@ -274,6 +278,7 @@ async function openExerciseDetail(ex) {
     .order("created_at", { ascending: false })
     .limit(4);
 
+  // Fetch latest note
   const { data: lastNote, error } = await supabase
     .from("exercise_notes")
     .select("note, created_at")
@@ -285,6 +290,7 @@ async function openExerciseDetail(ex) {
   if (error) console.error(error);
   document.getElementById("exercise-note").value = lastNote ? lastNote.note : "";
 
+  // Header labels
   const headerDiv = document.createElement("div");
   headerDiv.className = "flex items-center gap-2 mb-2 font-semibold text-gray-300";
   headerDiv.innerHTML = `
@@ -312,7 +318,7 @@ async function openExerciseDetail(ex) {
 
   // ---------------- SAVE NOTE + SETS ----------------
   document.getElementById("save-exercise-note").onclick = async () => {
-    if (!currentExercise || !currentWorkout || !currentWorkout.session_id) return;
+    if (!currentExercise || !currentWorkout || !currentWorkoutSessionId) return;
 
     const setsDivs = Array.from(document.getElementById("sets-container").children).slice(1);
     const noteValue = document.getElementById("exercise-note").value;
@@ -326,14 +332,15 @@ async function openExerciseDetail(ex) {
         await supabase.from("sets").insert({
           exercise_id: currentExercise.id,
           workout_id: currentWorkout.id,
-          session_id: currentWorkout.session_id,
           sets: i,
           reps,
-          weight
+          weight,
+          session_id: currentWorkoutSessionId
         });
       }
     }
 
+    // Save note separately
     if (noteValue.trim() !== "") {
       await supabase.from("exercise_notes").insert({
         exercise_id: currentExercise.id,
@@ -347,53 +354,54 @@ async function openExerciseDetail(ex) {
 
 // ---------------- FINISH WORKOUT ----------------
 document.getElementById("finish-workout-btn").onclick = async () => {
-  if (!currentWorkout || !currentWorkout.session_id) return;
+  if (!currentWorkout || !currentWorkoutSessionId) return;
 
-  const { data: sessionSets, error: sessionError } = await supabase
+  // Fetch only sets from THIS session
+  const { data: sessionSets, error: setsError } = await supabase
     .from("sets")
     .select("*")
-    .eq("session_id", currentWorkout.session_id);
+    .eq("session_id", currentWorkoutSessionId);
 
-  if (sessionError) {
+  if (setsError) {
     alert("Error fetching session sets.");
     return;
   }
 
   if (!sessionSets || sessionSets.length === 0) {
     alert("Workout finished!\nNo sets logged, so no PBs today.");
+    showPage("home-page");
+    currentSection = "home";
     return;
   }
 
+  let pbExercises = [];
+
+  // Group by exercise
   const setsByExercise = {};
   sessionSets.forEach(s => {
     if (!setsByExercise[s.exercise_id]) setsByExercise[s.exercise_id] = [];
     setsByExercise[s.exercise_id].push(s);
   });
 
-  const pbExercises = [];
-
+  // Compare each exercise's sets against ALL previous sets (exclude current session)
   for (const exerciseId in setsByExercise) {
-    const todaysSets = setsByExercise[exerciseId];
+    const todaysEntries = setsByExercise[exerciseId];
 
     const { data: previousSets } = await supabase
       .from("sets")
       .select("*")
       .eq("exercise_id", exerciseId)
-      .neq("session_id", currentWorkout.session_id);
+      .neq("session_id", currentWorkoutSessionId);
 
     let isPB = false;
 
     if (!previousSets || previousSets.length === 0) {
       isPB = true;
     } else {
-      for (const set of todaysSets) {
-        const setScore = set.weight * set.reps;
-        const beatsAnyPrevious = previousSets.some(prev => {
-          const prevScore = prev.weight * prev.reps;
-          return setScore > prevScore;
-        });
-
-        if (beatsAnyPrevious) {
+      for (const set of todaysEntries) {
+        const currentScore = set.weight * set.reps;
+        const beatsPrev = previousSets.some(prev => currentScore > prev.weight * prev.reps);
+        if (beatsPrev) {
           isPB = true;
           break;
         }
@@ -403,6 +411,7 @@ document.getElementById("finish-workout-btn").onclick = async () => {
     if (isPB) pbExercises.push(exerciseId);
   }
 
+  // Fetch names for PB exercises
   let message = "Workout finished!\n";
   if (pbExercises.length === 0) {
     message += "No PBs today.";
@@ -418,8 +427,7 @@ document.getElementById("finish-workout-btn").onclick = async () => {
 
   alert(message);
 
-  // Reset to home
-  currentWorkout = null;
-  currentSection = "home";
+  // Go back home
   showPage("home-page");
+  currentSection = "home";
 };
