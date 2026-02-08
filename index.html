@@ -56,6 +56,109 @@
     /* Input styling */
     input, textarea { border-radius: 4px; border: 1px solid #555; background-color: #1E1E1E; color: #fff; }
     input:focus, textarea:focus { outline: none; border-color: #2979FF; }
+
+    /* Modal */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background-color: #2C2C2C;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      border: 1px solid #444;
+    }
+    .modal h2 { margin-bottom: 1rem; font-size: 1.5rem; }
+    .modal-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .modal-input-group label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #ddd;
+    }
+    .modal-input-group input {
+      padding: 0.75rem;
+      font-size: 1rem;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+    .modal-buttons button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+    .modal-btn-cancel {
+      background-color: #444;
+      color: #fff;
+    }
+    .modal-btn-cancel:hover {
+      background-color: #555;
+    }
+    .modal-btn-confirm {
+      background-color: #2979FF;
+      color: #fff;
+    }
+    .modal-btn-confirm:hover {
+      background-color: #1C5ED6;
+    }
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 0.75rem;
+      background-color: #1E1E1E;
+      border-radius: 6px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+      background-color: #444;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .toggle-switch.active {
+      background-color: #4CAF50;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      background-color: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: left 0.3s;
+    }
+    .toggle-switch.active::after {
+      left: 24px;
+    }
   </style>
 </head>
 <body class="text-white min-h-screen p-4">
@@ -131,6 +234,44 @@ window.supabase = createClient(
 
   <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
   <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
+</div>
+
+<!-- MODAL: Create Workout -->
+<div id="create-workout-modal" class="modal">
+  <div class="modal-content">
+    <h2>Create New Workout</h2>
+    <div class="modal-input-group">
+      <label for="workout-name-input">Workout Name</label>
+      <input id="workout-name-input" type="text" placeholder="e.g., Chest Day, Upper Body">
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn-cancel" onclick="closeModal('create-workout-modal')">Cancel</button>
+      <button class="modal-btn-confirm" onclick="confirmCreateWorkout()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Exercise -->
+<div id="add-exercise-modal" class="modal">
+  <div class="modal-content">
+    <h2>Add New Exercise</h2>
+    <div class="modal-input-group">
+      <label for="exercise-name-input">Exercise Name</label>
+      <input id="exercise-name-input" type="text" placeholder="e.g., Bench Press, Squats">
+    </div>
+    <div class="modal-input-group">
+      <label for="exercise-sets-input">Number of Sets</label>
+      <input id="exercise-sets-input" type="number" placeholder="e.g., 4" min="1" value="4">
+    </div>
+    <div class="toggle-group">
+      <label for="exercise-warmup-toggle" style="margin: 0; flex: 1;">Include Warm-up Set</label>
+      <div id="exercise-warmup-toggle" class="toggle-switch active" onclick="toggleWarmup()"></div>
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn-cancel" onclick="closeModal('add-exercise-modal')">Cancel</button>
+      <button class="modal-btn-confirm" onclick="confirmAddExercise()">Add Exercise</button>
+    </div>
+  </div>
 </div>
 
 </body>
