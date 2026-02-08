@@ -2,6 +2,8 @@
 let currentWorkout = null;
 let currentExercise = null;
 let currentSection = "home";
+let exerciseConfig = {}; // Stores sets count and warmup preference per exercise
+let completedExercises = new Set(); // Tracks completed exercises in current session
 
 const quotes = [
   "Push yourself because no one else is going to do it for you.",
@@ -9,6 +11,58 @@ const quotes = [
   "Strength does not come from the body, it comes from the will.",
   "Sweat is fat crying."
 ];
+
+// ---------------- MODALS ----------------
+function openModal(modalId) {
+  document.getElementById(modalId).classList.add("active");
+  // Focus first input
+  const input = document.getElementById(modalId).querySelector("input");
+  if (input) input.focus();
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove("active");
+}
+
+function toggleWarmup() {
+  const toggle = document.getElementById("exercise-warmup-toggle");
+  toggle.classList.toggle("active");
+}
+
+async function confirmCreateWorkout() {
+  const name = document.getElementById("workout-name-input").value.trim();
+  if (!name) {
+    alert("Please enter a workout name");
+    return;
+  }
+  await supabase.from("workouts").insert({ name });
+  document.getElementById("workout-name-input").value = "";
+  closeModal("create-workout-modal");
+  loadWorkouts();
+}
+
+async function confirmAddExercise() {
+  const name = document.getElementById("exercise-name-input").value.trim();
+  const sets = parseInt(document.getElementById("exercise-sets-input").value) || 4;
+  const hasWarmup = document.getElementById("exercise-warmup-toggle").classList.contains("active");
+  
+  if (!name) {
+    alert("Please enter an exercise name");
+    return;
+  }
+
+  const exercise = await supabase.from("exercises").insert({ name, workout_id: currentWorkout.id }).select().single();
+  
+  if (exercise.data) {
+    exerciseConfig[exercise.data.id] = { sets, hasWarmup };
+  }
+
+  document.getElementById("exercise-name-input").value = "";
+  document.getElementById("exercise-sets-input").value = "4";
+  document.getElementById("exercise-warmup-toggle").classList.add("active");
+  closeModal("add-exercise-modal");
+  loadExercises(currentWorkout);
+}
 
 // ---------------- UTILITIES ----------------
 function showPage(pageId) {
@@ -161,10 +215,7 @@ async function loadWorkouts() {
 }
 
 document.getElementById("create-workout-btn").onclick = async () => {
-  const name = prompt("Workout name");
-  if (!name) return;
-  await supabase.from("workouts").insert({ name });
-  loadWorkouts();
+  openModal("create-workout-modal");
 };
 
 // ---------------- VIEW EXERCISES ----------------
@@ -253,10 +304,10 @@ async function loadExercises(workout) {
 }
 
 document.getElementById("add-exercise-btn").onclick = async () => {
-  const name = prompt("Exercise name");
-  if (!name) return;
-  await supabase.from("exercises").insert({ name, workout_id: currentWorkout.id });
-  loadExercises(currentWorkout);
+  if (!currentWorkout) return;
+  document.getElementById("exercise-sets-input").value = "4";
+  document.getElementById("exercise-warmup-toggle").classList.add("active");
+  openModal("add-exercise-modal");
 };
 
 // ---------------- START WORKOUT ----------------
@@ -287,6 +338,7 @@ function startWorkoutSession(workout) {
     ...workout,
     session_id: crypto.randomUUID()
   };
+  completedExercises = new Set(); // Reset completed exercises for new session
   loadWorkoutExercises(currentWorkout);
 }
 
@@ -307,8 +359,23 @@ async function loadWorkoutExercises(workout) {
 
   exercises.forEach(ex => {
     const div = document.createElement("div");
-    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800";
-    div.textContent = ex.name;
+    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 flex justify-between items-center";
+    
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = ex.name;
+    nameSpan.style.flex = "1";
+    div.appendChild(nameSpan);
+    
+    const isCompleted = completedExercises.has(ex.id);
+    if (isCompleted) {
+      const checkmark = document.createElement("span");
+      checkmark.textContent = "✓";
+      checkmark.style.color = "#4CAF50";
+      checkmark.style.fontSize = "1.5rem";
+      checkmark.style.fontWeight = "bold";
+      div.appendChild(checkmark);
+    }
+    
     div.onclick = () => openExerciseDetail(ex);
     list.appendChild(div);
   });
@@ -337,7 +404,7 @@ async function openExerciseDetail(ex) {
     .select("*")
     .eq("exercise_id", ex.id)
     .order("created_at", { ascending: false })
-    .limit(4);
+    .limit(6);
 
   const { data: lastNote, error } = await supabase
     .from("exercise_notes")
@@ -360,14 +427,28 @@ async function openExerciseDetail(ex) {
   `;
   setsContainer.appendChild(headerDiv);
 
-  for (let i = 0; i < 4; i++) {
+  // Get the exercise config (sets count and warmup preference)
+  const config = exerciseConfig[ex.id] || { sets: 3, hasWarmup: true };
+  const totalSets = config.hasWarmup ? config.sets + 1 : config.sets;
+
+  for (let i = 0; i < totalSets; i++) {
+    const isWarmup = config.hasWarmup && i === 0;
+    let displayLabel;
+    if (isWarmup) {
+      displayLabel = "Warm-up";
+    } else if (config.hasWarmup) {
+      displayLabel = "Set " + i;
+    } else {
+      displayLabel = "Set " + (i + 1);
+    }
+    
     const lastSet = lastSets.find(s => s.sets === i);
     const prevText = lastSet ? `${lastSet.reps} × ${lastSet.weight}kg` : '-';
 
     const div = document.createElement("div");
     div.className = "flex items-center gap-2 mb-1";
     div.innerHTML = `
-      <span class="font-bold w-20">${i === 0 ? "Warm-up" : "Set " + i}:</span>
+      <span class="font-bold w-20">${displayLabel}:</span>
       <input type="number" placeholder="Reps" class="w-16 p-1 text-center">
       <input type="number" placeholder="Kg" class="w-16 p-1 text-center">
       <div class="flex-1 text-right text-gray-400 text-sm">${prevText}</div>
@@ -405,7 +486,12 @@ async function openExerciseDetail(ex) {
       });
     }
 
-    alert("Saved!");
+    // Mark exercise as completed
+    completedExercises.add(currentExercise.id);
+    
+    // Return to select exercise screen
+    currentSection = "workout-exercises";
+    await loadWorkoutExercises(currentWorkout);
   };
 }
 
@@ -485,5 +571,13 @@ document.getElementById("finish-workout-btn").onclick = async () => {
   // Reset to home
   currentWorkout = null;
   currentSection = "home";
+  completedExercises = new Set(); // Reset completed exercises for new session
   showPage("home-page");
 };
+
+// ---------------- EXPOSE FUNCTIONS TO GLOBAL SCOPE ----------------
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.toggleWarmup = toggleWarmup;
+window.confirmCreateWorkout = confirmCreateWorkout;
+window.confirmAddExercise = confirmAddExercise;
