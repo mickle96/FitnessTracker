@@ -6,10 +6,12 @@ let exerciseConfig = {}; // Stores sets count and warmup preference per exercise
 let completedExercises = new Set(); // Tracks completed exercises in current session
 
 const quotes = [
-  "Push yourself because no one else is going to do it for you.",
-  "The body achieves what the mind believes.",
-  "Strength does not come from the body, it comes from the will.",
-  "Sweat is fat crying."
+   "The hardest part is over. You showed up.",
+"You miss one hundred percent of the shots you don’t take.",
+"Do something today that your future self will thank you for.",
+"You must expect things of yourself before you can do them.",
+"We can push ourselves further. We always have more to give.",
+"Your mind will quit a thousand times before your body will."
 ];
 
 // ---------------- MODALS ----------------
@@ -66,13 +68,131 @@ async function confirmAddExercise() {
 
 // ---------------- UTILITIES ----------------
 function showPage(pageId) {
-  document.querySelectorAll("body > div").forEach(d => d.classList.add("hidden"));
-  const page = document.getElementById(pageId);
-  if (page) page.classList.remove("hidden");
+  const pages = document.querySelectorAll(".page");
+  const nextPage = document.getElementById(pageId);
+
+  pages.forEach(page => {
+    if (page === nextPage) {
+      page.classList.remove("hidden");
+      requestAnimationFrame(() => page.classList.add("is-active"));
+      return;
+    }
+
+    if (!page.classList.contains("hidden")) {
+      page.classList.remove("is-active");
+      setTimeout(() => page.classList.add("hidden"), 180);
+    }
+  });
 }
 
 function randomQuote() {
   return quotes[Math.floor(Math.random() * quotes.length)];
+}
+
+function isWarmupSet(set) {
+  return set.sets === 0;
+}
+
+function getBestSet(sets) {
+  let best = null;
+  sets.forEach(s => {
+    if (!best) {
+      best = s;
+      return;
+    }
+    if (s.weight > best.weight || (s.weight === best.weight && s.reps > best.reps)) {
+      best = s;
+    }
+  });
+  return best;
+}
+
+function formatSessionDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const timeZone = "Australia/Brisbane";
+  const now = new Date();
+  const key = getDateKey(date, timeZone);
+  const todayKey = getDateKey(now, timeZone);
+  if (key === todayKey) return "Today";
+
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const yesterdayKey = getDateKey(yesterday, timeZone);
+  if (key === yesterdayKey) return "Yesterday";
+
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone,
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(date);
+}
+
+function getDateKey(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const map = {};
+  parts.forEach(part => {
+    if (part.type !== "literal") {
+      map[part.type] = part.value;
+    }
+  });
+
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+async function getSessionPBNames(session, sessionSets, exerciseMap) {
+  const exerciseIds = [...new Set(sessionSets.map(s => s.exercise_id))];
+  if (exerciseIds.length === 0) return [];
+
+  const { data: previousSets } = await supabase
+    .from("sets")
+    .select("*")
+    .in("exercise_id", exerciseIds)
+    .lt("created_at", session.createdAt)
+    .neq("session_id", session.sessionId);
+
+  const previousByExercise = new Map();
+  (previousSets || []).forEach(set => {
+    if (isWarmupSet(set)) return;
+    if (!previousByExercise.has(set.exercise_id)) previousByExercise.set(set.exercise_id, []);
+    previousByExercise.get(set.exercise_id).push(set);
+  });
+
+  const nonWarmupSessionSets = sessionSets.filter(s => !isWarmupSet(s));
+  const sessionGrouped = new Map();
+  nonWarmupSessionSets.forEach(set => {
+    if (!sessionGrouped.has(set.exercise_id)) sessionGrouped.set(set.exercise_id, []);
+    sessionGrouped.get(set.exercise_id).push(set);
+  });
+
+  const pbNames = [];
+  sessionGrouped.forEach((sets, exerciseId) => {
+    const bestSession = getBestSet(sets);
+    if (!bestSession) return;
+
+    const prevSets = previousByExercise.get(exerciseId) || [];
+    const bestPrev = getBestSet(prevSets);
+    if (!bestPrev) {
+      pbNames.push(exerciseMap.get(exerciseId) || "Exercise");
+      return;
+    }
+
+    if (
+      bestSession.weight > bestPrev.weight ||
+      (bestSession.weight === bestPrev.weight && bestSession.reps > bestPrev.reps)
+    ) {
+      pbNames.push(exerciseMap.get(exerciseId) || "Exercise");
+    }
+  });
+
+  return pbNames;
 }
 
 // ---------------- BACK BUTTON ----------------
@@ -87,6 +207,10 @@ document.addEventListener("click", e => {
     case "view-exercises":
       loadWorkouts();
       currentSection = "view-workouts";
+      break;
+    case "previous-workouts":
+      showPage("home-page");
+      currentSection = "home";
       break;
     case "start-workout":
       showPage("home-page");
@@ -104,6 +228,64 @@ document.addEventListener("click", e => {
 });
 // ---------------- TIMER ----------------
 let timerInterval = null;
+const timerStorageKey = "gymTimerState";
+
+function updateTimerDisplay(sec) {
+  const display = document.getElementById("timer-display");
+  display.textContent = formatTime(Math.max(0, sec));
+}
+
+function saveTimerState(state) {
+  localStorage.setItem(timerStorageKey, JSON.stringify(state));
+}
+
+function clearTimerState() {
+  localStorage.removeItem(timerStorageKey);
+}
+
+function getTimerState() {
+  const raw = localStorage.getItem(timerStorageKey);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function startTimerWithEnd(endAt) {
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    const remaining = Math.ceil((endAt - Date.now()) / 1000);
+    updateTimerDisplay(remaining);
+
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      clearTimerState();
+    }
+  }, 1000);
+}
+
+function syncTimerFromStorage() {
+  const state = getTimerState();
+  if (!state || !state.endAt) return;
+
+  const remaining = Math.ceil((state.endAt - Date.now()) / 1000);
+  if (remaining <= 0) {
+    updateTimerDisplay(0);
+    clearTimerState();
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    return;
+  }
+
+  updateTimerDisplay(remaining);
+  startTimerWithEnd(state.endAt);
+}
 
 function formatTime(sec) {
   const m = String(Math.floor(sec / 60)).padStart(2, "0");
@@ -113,35 +295,37 @@ function formatTime(sec) {
 
 document.getElementById("start-timer-btn").onclick = () => {
   const input = document.getElementById("timer-input");
-  const display = document.getElementById("timer-display");
 
   let sec = parseInt(input.value);
   if (isNaN(sec) || sec <= 0) return;
 
-  display.textContent = formatTime(sec);
-
-  if (timerInterval) clearInterval(timerInterval);
-
-  timerInterval = setInterval(() => {
-    sec--;
-    display.textContent = formatTime(sec);
-
-    if (sec <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-  }, 1000);
+  const endAt = Date.now() + sec * 1000;
+  updateTimerDisplay(sec);
+  saveTimerState({ endAt });
+  startTimerWithEnd(endAt);
 };
 
 document.getElementById("reset-timer-btn").onclick = () => {
   const input = document.getElementById("timer-input");
-  const display = document.getElementById("timer-display");
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = null;
 
-  display.textContent = formatTime(parseInt(input.value) || 0);
+  clearTimerState();
+  updateTimerDisplay(parseInt(input.value) || 0);
 };
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    syncTimerFromStorage();
+  }
+});
+
+window.addEventListener("focus", () => {
+  syncTimerFromStorage();
+});
+
+syncTimerFromStorage();
 // ---------------- HOME ----------------
 document.getElementById("view-workouts-btn").onclick = () => {
   currentSection = "view-workouts";
@@ -153,7 +337,209 @@ document.getElementById("start-workout-btn").onclick = () => {
   loadStartWorkout();
 };
 
+document.getElementById("view-previous-workouts-btn").onclick = () => {
+  currentSection = "previous-workouts";
+  loadPreviousWorkouts();
+};
+
 document.getElementById("quote-home").textContent = randomQuote();
+
+// ---------------- PREVIOUS WORKOUTS ----------------
+async function loadPreviousWorkouts() {
+  showPage("previous-workouts-page");
+  document.getElementById("quote-previous").textContent = randomQuote();
+
+  const list = document.getElementById("previous-workouts-list");
+  list.innerHTML = "";
+
+  const { data: sessionRows, error } = await supabase
+    .from("sets")
+    .select("session_id, workout_id, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to load sessions", error);
+    list.textContent = "Failed to load previous workouts.";
+    return;
+  }
+
+  if (!sessionRows || sessionRows.length === 0) {
+    list.textContent = "No previous workouts logged yet.";
+    return;
+  }
+
+  const sessionMap = new Map();
+  sessionRows.forEach(row => {
+    if (!sessionMap.has(row.session_id)) {
+      sessionMap.set(row.session_id, {
+        sessionId: row.session_id,
+        workoutId: row.workout_id,
+        createdAt: row.created_at
+      });
+    }
+  });
+
+  const sessions = Array.from(sessionMap.values());
+  const workoutIds = [...new Set(sessions.map(s => s.workoutId))];
+
+  const { data: workouts, error: workoutError } = await supabase
+    .from("workouts")
+    .select("id, name")
+    .in("id", workoutIds);
+
+  if (workoutError) {
+    console.error("Failed to load workout names", workoutError);
+  }
+
+  const workoutNameMap = new Map((workouts || []).map(w => [w.id, w.name]));
+
+  sessions.forEach(session => {
+    const card = document.createElement("div");
+    card.className = "border border-gray-700 rounded-xl p-3 bg-[#1A1C22]/80";
+
+    const header = document.createElement("div");
+    header.className = "flex items-center justify-between gap-3";
+
+    const info = document.createElement("div");
+    info.className = "flex flex-col";
+    const title = document.createElement("div");
+    title.className = "font-semibold text-lg";
+    title.textContent = workoutNameMap.get(session.workoutId) || "Workout";
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "text-sm text-gray-400";
+    subtitle.textContent = formatSessionDate(session.createdAt);
+
+    info.appendChild(title);
+    info.appendChild(subtitle);
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.className = "btn-border btn-icon border-blue-500 text-blue-400";
+    toggleBtn.textContent = "Details";
+
+    const pbSummary = document.createElement("div");
+    pbSummary.className = "text-sm text-yellow-300";
+    pbSummary.textContent = "PBs: ...";
+
+    header.appendChild(info);
+    header.appendChild(pbSummary);
+    header.appendChild(toggleBtn);
+
+    const details = document.createElement("div");
+    details.className = "hidden mt-3 text-sm";
+
+    toggleBtn.onclick = async () => {
+      const isHidden = details.classList.contains("hidden");
+      if (isHidden && !details.dataset.loaded) {
+        await loadSessionDetails(session, details);
+        details.dataset.loaded = "true";
+      }
+      details.classList.toggle("hidden", !isHidden);
+      toggleBtn.textContent = isHidden ? "Hide" : "Details";
+    };
+
+    card.appendChild(header);
+    card.appendChild(details);
+    list.appendChild(card);
+
+    loadSessionPBSummary(session, pbSummary);
+  });
+}
+
+async function loadSessionPBSummary(session, target) {
+  const { data: sessionSets, error } = await supabase
+    .from("sets")
+    .select("*")
+    .eq("session_id", session.sessionId);
+
+  if (error) {
+    console.error("Failed to load session sets", error);
+    target.textContent = "PBs: —";
+    return;
+  }
+
+  if (!sessionSets || sessionSets.length === 0) {
+    target.textContent = "PBs: 0";
+    return;
+  }
+
+  const exerciseIds = [...new Set(sessionSets.map(s => s.exercise_id))];
+  const { data: exercises } = await supabase
+    .from("exercises")
+    .select("id, name")
+    .in("id", exerciseIds);
+
+  const exerciseMap = new Map((exercises || []).map(e => [e.id, e.name]));
+  const pbNames = await getSessionPBNames(session, sessionSets, exerciseMap);
+  target.textContent = `PBs: ${pbNames.length}`;
+}
+
+async function loadSessionDetails(session, container) {
+  const { data: sessionSets, error } = await supabase
+    .from("sets")
+    .select("*")
+    .eq("session_id", session.sessionId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Failed to load session sets", error);
+    container.textContent = "Failed to load session details.";
+    return;
+  }
+
+  if (!sessionSets || sessionSets.length === 0) {
+    container.textContent = "No sets logged for this session.";
+    return;
+  }
+
+  const exerciseIds = [...new Set(sessionSets.map(s => s.exercise_id))];
+  const { data: exercises } = await supabase
+    .from("exercises")
+    .select("id, name")
+    .in("id", exerciseIds);
+
+  const exerciseMap = new Map((exercises || []).map(e => [e.id, e.name]));
+  const grouped = new Map();
+
+  sessionSets.forEach(set => {
+    if (!grouped.has(set.exercise_id)) grouped.set(set.exercise_id, []);
+    grouped.get(set.exercise_id).push(set);
+  });
+
+  const pbNames = await getSessionPBNames(session, sessionSets, exerciseMap);
+
+  container.innerHTML = "";
+
+  const pbSummary = document.createElement("div");
+  pbSummary.className = "text-sm text-yellow-300";
+  pbSummary.textContent = pbNames.length
+    ? `PBs: ${pbNames.length} (${pbNames.join(", ")})`
+    : "PBs: 0";
+  container.appendChild(pbSummary);
+
+  grouped.forEach((sets, exerciseId) => {
+    const block = document.createElement("div");
+    block.className = "mt-3";
+
+    const name = document.createElement("div");
+    name.className = "font-semibold text-gray-200";
+    name.textContent = exerciseMap.get(exerciseId) || "Exercise";
+
+    const list = document.createElement("div");
+    list.className = "mt-1 space-y-1 text-gray-300";
+
+    sets.forEach(set => {
+      const row = document.createElement("div");
+      const label = isWarmupSet(set) ? "Warm-up" : `Set ${set.sets}`;
+      row.textContent = `${label}: ${set.reps} x ${set.weight}kg`;
+      list.appendChild(row);
+    });
+
+    block.appendChild(name);
+    block.appendChild(list);
+    container.appendChild(block);
+  });
+}
 
 // ---------------- VIEW WORKOUTS ----------------
 async function loadWorkouts() {
@@ -166,7 +552,7 @@ async function loadWorkouts() {
 
   data.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800 cursor-pointer";
+    div.className = "list-row p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800 cursor-pointer";
 
     const nameSpan = document.createElement("span");
     nameSpan.textContent = workout.name;
@@ -176,7 +562,7 @@ async function loadWorkouts() {
 
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
-    editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
+    editBtn.className = "btn-border btn-icon border-yellow-500 text-yellow-400 ml-2 text-sm";
     editBtn.onclick = async (e) => {
       e.stopPropagation();
       const newName = prompt("Edit workout name", workout.name);
@@ -189,7 +575,7 @@ async function loadWorkouts() {
     // ---------------- DELETE WORKOUT ----------------
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
-    delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
+    delBtn.className = "btn-border btn-icon border-red-500 text-red-400 ml-2 text-sm";
     delBtn.onclick = async (e) => {
       e.stopPropagation();
       if (!confirm("Delete this workout and all its exercises/sets?")) return;
@@ -242,16 +628,11 @@ async function loadExercises(workout) {
       .eq("exercise_id", ex.id)
       .order("created_at", { ascending: true });
 
-    let pb = { weight: 0, reps: 0, total: 0 };
-    allSets.forEach(s => {
-      const total = s.reps * s.weight;
-      if (s.weight > pb.weight || (s.weight === pb.weight && total > pb.total)) {
-        pb = { weight: s.weight, reps: s.reps, total };
-      }
-    });
+    const nonWarmupSets = allSets.filter(s => !isWarmupSet(s));
+    const bestSet = getBestSet(nonWarmupSets);
 
     const div = document.createElement("div");
-    div.className = "p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800";
+    div.className = "list-row p-3 border border-gray-600 rounded flex justify-between items-center hover:bg-gray-800";
 
     const nameSpan = document.createElement("span");
     nameSpan.textContent = ex.name;
@@ -259,13 +640,13 @@ async function loadExercises(workout) {
     div.appendChild(nameSpan);
 
     const pbSpan = document.createElement("span");
-    pbSpan.textContent = (pb.weight === 0 && pb.reps === 0) ? "PB: —" : `PB: ${pb.weight}kg × ${pb.reps}`;
+    pbSpan.textContent = !bestSet ? "PB: —" : `PB: ${bestSet.weight}kg × ${bestSet.reps}`;
     pbSpan.className = "text-yellow-400 font-bold ml-2";
     div.appendChild(pbSpan);
 
     const editBtn = document.createElement("button");
     editBtn.textContent = "✏️";
-    editBtn.className = "btn-border border-yellow-500 text-yellow-400 ml-2 text-sm";
+    editBtn.className = "btn-border btn-icon border-yellow-500 text-yellow-400 ml-2 text-sm";
     editBtn.onclick = async (e) => {
       e.stopPropagation();
       const newName = prompt("Edit exercise name", ex.name);
@@ -278,7 +659,7 @@ async function loadExercises(workout) {
     // ---------------- DELETE EXERCISE ----------------
     const delBtn = document.createElement("button");
     delBtn.textContent = "🗑️";
-    delBtn.className = "btn-border border-red-500 text-red-400 ml-2 text-sm";
+    delBtn.className = "btn-border btn-icon border-red-500 text-red-400 ml-2 text-sm";
     delBtn.onclick = async (e) => {
       e.stopPropagation();
       if (!confirm("Delete this exercise and all its sets/notes?")) return;
@@ -318,13 +699,43 @@ async function loadStartWorkout() {
   document.getElementById("start-workout-title").textContent = "Select Workout";
 
   const { data: workouts } = await supabase.from("workouts").select("*");
+  const { data: recentSets } = await supabase
+    .from("sets")
+    .select("workout_id, created_at")
+    .order("created_at", { ascending: false });
+
+  const lastCompletedByWorkout = new Map();
+  (recentSets || []).forEach(set => {
+    if (!lastCompletedByWorkout.has(set.workout_id)) {
+      lastCompletedByWorkout.set(set.workout_id, set.created_at);
+    }
+  });
+
   const list = document.getElementById("start-workout-list");
   list.innerHTML = "";
 
   workouts.forEach(workout => {
     const div = document.createElement("div");
-    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 transition-colors";
-    div.textContent = workout.name;
+    div.className = "list-row p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 transition-colors";
+
+    const info = document.createElement("div");
+    info.className = "flex flex-col";
+
+    const title = document.createElement("div");
+    title.className = "font-semibold";
+    title.textContent = workout.name;
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "text-sm text-gray-400";
+    const lastCompleted = lastCompletedByWorkout.get(workout.id);
+    subtitle.textContent = lastCompleted
+      ? `Last completed: ${formatSessionDate(lastCompleted)}`
+      : "Last completed: —";
+
+    info.appendChild(title);
+    info.appendChild(subtitle);
+    div.appendChild(info);
+
     div.onclick = () => startWorkoutSession(workout);
     list.appendChild(div);
   });
@@ -359,7 +770,7 @@ async function loadWorkoutExercises(workout) {
 
   exercises.forEach(ex => {
     const div = document.createElement("div");
-    div.className = "p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 flex justify-between items-center";
+    div.className = "list-row p-3 border border-gray-600 rounded cursor-pointer hover:bg-gray-800 flex justify-between items-center";
     
     const nameSpan = document.createElement("span");
     nameSpan.textContent = ex.name;
@@ -523,7 +934,11 @@ document.getElementById("finish-workout-btn").onclick = async () => {
   const pbExercises = [];
 
   for (const exerciseId in setsByExercise) {
-    const todaysSets = setsByExercise[exerciseId];
+    const todaysSets = setsByExercise[exerciseId].filter(s => !isWarmupSet(s));
+
+    if (todaysSets.length === 0) {
+      continue;
+    }
 
     const { data: previousSets } = await supabase
       .from("sets")
@@ -531,19 +946,19 @@ document.getElementById("finish-workout-btn").onclick = async () => {
       .eq("exercise_id", exerciseId)
       .neq("session_id", currentWorkout.session_id);
 
+    const previousNonWarmup = (previousSets || []).filter(s => !isWarmupSet(s));
+
     let isPB = false;
 
-    if (!previousSets || previousSets.length === 0) {
+    if (!previousNonWarmup || previousNonWarmup.length === 0) {
       isPB = true;
     } else {
+      const bestPrevious = getBestSet(previousNonWarmup);
       for (const set of todaysSets) {
-        const setScore = set.weight * set.reps;
-        const beatsAnyPrevious = previousSets.some(prev => {
-          const prevScore = prev.weight * prev.reps;
-          return setScore > prevScore;
-        });
-
-        if (beatsAnyPrevious) {
+        if (
+          set.weight > bestPrevious.weight ||
+          (set.weight === bestPrevious.weight && set.reps > bestPrevious.reps)
+        ) {
           isPB = true;
           break;
         }

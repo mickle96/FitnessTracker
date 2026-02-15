@@ -6,13 +6,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Tailwind + Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #111111; }
-    h1,h2,h3 { font-family: 'Montserrat', sans-serif; }
+    :root {
+      --bg-0: #0E0F12;
+      --bg-1: #15171C;
+      --card: #25272E;
+      --card-border: #3A3D47;
+      --text-soft: #C6CBD6;
+    }
+
+    body {
+      font-family: 'Work Sans', sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1E2430 0%, #0E0F12 50%, #0B0C10 100%);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
+
+    .app-shell {
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .page {
+      min-height: 100dvh;
+      padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+      gap: 16px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .page.is-active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .page h1 {
+      font-size: clamp(1.9rem, 6vw, 2.6rem);
+      line-height: 1.1;
+    }
+
+    .page h2 {
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      line-height: 1.2;
+    }
+
+    .scroll-panel {
+      -webkit-overflow-scrolling: touch;
+    }
     
     /* Card */
-    .card { background-color: #2C2C2C; transition: transform 0.1s; }
+    .card { background-color: var(--card); transition: transform 0.1s; }
     .card:hover { transform: scale(1.02); }
 
     /* Filled buttons */
@@ -22,6 +67,7 @@
       font-weight: 700;
       text-transform: uppercase;
       border-radius: 10px;
+      min-height: 48px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
       transition: all 0.2s;
     }
@@ -33,10 +79,23 @@
       font-weight: 700;
       text-transform: uppercase;
       border-radius: 10px;
+      min-height: 48px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
       transition: all 0.2s;
     }
     .btn-success:hover { background-color: #3A9D42; }
+
+    .btn-accent {
+      background-color: #FACC15;
+      color: #111111;
+      font-weight: 700;
+      text-transform: uppercase;
+      border-radius: 10px;
+      min-height: 48px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      transition: all 0.2s;
+    }
+    .btn-accent:hover { background-color: #EAB308; }
 
     /* Border-only buttons */
     .btn-border {
@@ -45,6 +104,7 @@
       font-weight: 700;
       text-transform: uppercase;
       padding: 0.75rem 1rem;
+      min-height: 48px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.25);
       transition: all 0.2s;
       background-color: transparent;
@@ -53,9 +113,54 @@
       filter: brightness(1.1);
     }
 
+    .btn-icon {
+      min-height: 40px;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    button,
+    .list-row {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    button:active,
+    .list-row:active {
+      transform: scale(0.98);
+    }
+
     /* Input styling */
-    input, textarea { border-radius: 4px; border: 1px solid #555; background-color: #1E1E1E; color: #fff; }
+    input, textarea {
+      border-radius: 8px;
+      border: 1px solid #555;
+      background-color: #1E1E1E;
+      color: #fff;
+      font-size: 16px;
+      min-height: 44px;
+    }
     input:focus, textarea:focus { outline: none; border-color: #2979FF; }
+
+    textarea {
+      min-height: 120px;
+    }
+
+    .list-row {
+      padding: 0.85rem 0.9rem;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-height: 56px;
+      background-color: rgba(25, 26, 30, 0.6);
+      transition: background-color 0.2s, transform 0.1s;
+      cursor: pointer;
+    }
+
+    .list-row:hover {
+      background-color: rgba(35, 37, 44, 0.9);
+    }
 
     /* Modal */
     .modal {
@@ -77,6 +182,8 @@
       padding: 2rem;
       max-width: 450px;
       width: 90%;
+      max-height: 85dvh;
+      overflow-y: auto;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
       border: 1px solid #444;
     }
@@ -135,10 +242,10 @@
     }
     .toggle-switch {
       position: relative;
-      width: 50px;
-      height: 28px;
+      width: 56px;
+      height: 32px;
       background-color: #444;
-      border-radius: 14px;
+      border-radius: 16px;
       cursor: pointer;
       transition: background-color 0.3s;
     }
@@ -148,8 +255,8 @@
     .toggle-switch::after {
       content: '';
       position: absolute;
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       background-color: white;
       border-radius: 50%;
       top: 2px;
@@ -157,11 +264,29 @@
       transition: left 0.3s;
     }
     .toggle-switch.active::after {
-      left: 24px;
+      left: 26px;
+    }
+
+    @media (max-width: 480px) {
+      .modal-buttons {
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+
+      .modal-buttons button {
+        width: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .page {
+        transition: none;
+        transform: none;
+      }
     }
   </style>
 </head>
-<body class="text-white min-h-screen p-4">
+<body class="text-white min-h-screen">
 
 <!-- Supabase -->
 <script type="module">
@@ -174,43 +299,53 @@ window.supabase = createClient(
 
 <script type="module" src="app.js" defer></script>
 
+<main class="app-shell">
 <!-- HOME -->
-<div id="home-page" class="flex flex-col gap-4">
+<div id="home-page" class="page is-active flex flex-col gap-4">
   <h1 class="text-4xl font-bold text-center text-white">Gym Tracker</h1>
-  <button id="view-workouts-btn" class="btn-primary w-full text-xl">View Workouts</button>
+  <button id="view-workouts-btn" class="btn-primary w-full text-xl">My Workouts</button>
   <button id="start-workout-btn" class="btn-success w-full text-xl">Start Workout</button>
+  <button id="view-previous-workouts-btn" class="btn-accent w-full text-xl">Previous Workouts</button>
   <p id="quote-home" class="text-gray-400 italic text-center"></p>
 </div>
 
 <!-- VIEW WORKOUTS -->
-<div id="view-workouts-page" class="hidden flex flex-col gap-3">
+<div id="view-workouts-page" class="page hidden flex flex-col gap-3">
   <button class="back-btn btn-border border-blue-500 text-blue-500">Back</button>
-  <h2 class="text-3xl font-bold text-center">Your Workouts</h2>
-  <div id="workouts-list" class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto"></div>
+  <h2 class="text-3xl font-bold text-center">My Workouts</h2>
+  <div id="workouts-list" class="scroll-panel flex flex-col gap-2 max-h-[70vh] overflow-y-auto"></div>
   <button id="create-workout-btn" class="btn-border border-blue-500 text-blue-500 w-full">Create Workout</button>
   <p id="quote-view" class="text-gray-400 italic text-center"></p>
 </div>
 
+<!-- PREVIOUS WORKOUTS -->
+<div id="previous-workouts-page" class="page hidden flex flex-col gap-3">
+  <button class="back-btn btn-border border-blue-500 text-blue-500">Back</button>
+  <h2 class="text-3xl font-bold text-center">Previous Workouts</h2>
+  <div id="previous-workouts-list" class="scroll-panel flex flex-col gap-3 max-h-[70vh] overflow-y-auto"></div>
+  <p id="quote-previous" class="text-gray-400 italic text-center"></p>
+</div>
+
 <!-- VIEW EXERCISES -->
-<div id="view-exercises-page" class="hidden flex flex-col gap-3">
+<div id="view-exercises-page" class="page hidden flex flex-col gap-3">
   <button class="back-btn btn-border border-blue-500 text-blue-500">Back</button>
   <h2 id="selected-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
-  <div id="exercises-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+  <div id="exercises-list" class="scroll-panel flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
   <button id="add-exercise-btn" class="btn-border border-blue-500 text-blue-500 w-full">Add Exercise</button>
   <p id="quote-exercises" class="text-gray-400 italic text-center"></p>
 </div>
 
 <!-- START WORKOUT -->
-<div id="start-workout-page" class="hidden flex flex-col gap-3">
+<div id="start-workout-page" class="page hidden flex flex-col gap-3">
   <button class="back-btn btn-border border-blue-500 text-blue-500">Back</button>
   <h2 id="start-workout-title" class="text-3xl font-bold text-center">Select Workout</h2>
-  <div id="start-workout-list" class="flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
+  <div id="start-workout-list" class="scroll-panel flex flex-col gap-2 max-h-[65vh] overflow-y-auto"></div>
   <button id="finish-workout-btn" class="btn-success w-full mt-3 hidden">Finish Workout</button>
   <p id="quote-start" class="text-gray-400 italic text-center"></p>
 </div>
 
 <!-- EXERCISE DETAIL -->
-<div id="exercise-detail-page" class="hidden flex flex-col gap-3">
+<div id="exercise-detail-page" class="page hidden flex flex-col gap-3">
   <button class="back-btn btn-border border-blue-500 text-blue-500">Back</button>
   <h2 id="exercise-title" class="text-3xl font-bold text-center"></h2>
 
@@ -226,7 +361,7 @@ window.supabase = createClient(
   </div>
 
   <!-- Sets -->
-  <div id="sets-container" class="flex flex-col gap-3 max-h-[50vh] overflow-y-auto"></div>
+  <div id="sets-container" class="scroll-panel flex flex-col gap-3 max-h-[50vh] overflow-y-auto"></div>
 
   <!-- Notes -->
   <textarea id="exercise-note" class="p-3 rounded text-lg w-full" placeholder="Notes"></textarea>
@@ -235,6 +370,8 @@ window.supabase = createClient(
   <p id="exercise-pb" class="text-yellow-400 font-bold text-lg text-center"></p>
   <p id="quote-exercise" class="text-gray-400 italic text-center"></p>
 </div>
+
+</main>
 
 <!-- MODAL: Create Workout -->
 <div id="create-workout-modal" class="modal">
