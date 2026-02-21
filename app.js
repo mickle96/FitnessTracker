@@ -518,6 +518,14 @@ async function loadSessionDetails(session, container) {
   container.appendChild(pbSummary);
 
   grouped.forEach((sets, exerciseId) => {
+    const uniqueBySetNumber = new Map();
+    sets.forEach(set => {
+      uniqueBySetNumber.set(set.sets, set);
+    });
+
+    const uniqueSets = Array.from(uniqueBySetNumber.values())
+      .sort((a, b) => a.sets - b.sets);
+
     const block = document.createElement("div");
     block.className = "mt-3";
 
@@ -528,7 +536,7 @@ async function loadSessionDetails(session, container) {
     const list = document.createElement("div");
     list.className = "mt-1 space-y-1 text-gray-300";
 
-    sets.forEach(set => {
+    uniqueSets.forEach(set => {
       const row = document.createElement("div");
       const label = isWarmupSet(set) ? "Warm-up" : `Set ${set.sets}`;
       row.textContent = `${label}: ${set.reps} x ${set.weight}kg`;
@@ -872,6 +880,12 @@ async function openExerciseDetail(ex) {
 
     const setsDivs = Array.from(document.getElementById("sets-container").children).slice(1);
     const noteValue = document.getElementById("exercise-note").value;
+
+    await supabase
+      .from("sets")
+      .delete()
+      .eq("session_id", currentWorkout.session_id)
+      .eq("exercise_id", currentExercise.id);
 
     for (let i = 0; i < setsDivs.length; i++) {
       const inputs = setsDivs[i].querySelectorAll("input");
